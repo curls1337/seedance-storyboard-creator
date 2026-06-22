@@ -11,7 +11,8 @@ const state = {
   textModel: 'gpt-4o-mini',
   imageModel: 'gemini-3.1-flash-image',
   sceneCount: 11,
-  isConnected: false
+  isConnected: false,
+  productImage: ''
 };
 
 // Built-in Templates Data
@@ -82,6 +83,13 @@ const els = {
   masterSeedancePrompt: document.getElementById('master-seedance-prompt'),
   btnCopySeedancePrompt: document.getElementById('btn-copy-seedance-prompt'),
   
+  // Product image elements
+  productImageInput: document.getElementById('product-image-input'),
+  btnUploadProduct: document.getElementById('btn-upload-product'),
+  btnClearProduct: document.getElementById('btn-clear-product'),
+  productPreviewContainer: document.getElementById('product-preview-container'),
+  productPreviewImg: document.getElementById('product-preview-img'),
+  
   // Toast Notification
   toastNotification: document.getElementById('toast-notification'),
   toastMessage: document.getElementById('toast-message')
@@ -145,6 +153,11 @@ function setupEventListeners() {
   els.btnExportStoryboard.addEventListener('click', downloadCombinedStoryboardImage);
   els.btnUploadCombined.addEventListener('click', () => els.combinedFileInput.click());
   els.combinedFileInput.addEventListener('change', handleCombinedFileUpload);
+
+  // Product image events
+  els.btnUploadProduct.addEventListener('click', () => els.productImageInput.click());
+  els.productImageInput.addEventListener('change', handleProductImageUpload);
+  els.btnClearProduct.addEventListener('click', clearProductImage);
 
   // Template select
   els.templateSelect.addEventListener('change', () => {
@@ -310,6 +323,25 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
 }`;
 
   try {
+    const messages = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    if (state.productImage) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}". Analyze the product reference image and make sure the generated prompt explicitly describes this specific product, its packaging, and branding details.` },
+          { type: 'image_url', image_url: { url: state.productImage } }
+        ]
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}"`
+      });
+    }
+
     const response = await fetch('/proxy', {
       method: 'POST',
       headers: {
@@ -320,10 +352,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       body: JSON.stringify({
         model: state.textModel,
         response_format: { type: "json_object" },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}"` }
-        ]
+        messages: messages
       })
     });
     
@@ -530,6 +559,32 @@ async function runOneClickFlow() {
     els.btnOneClickFlow.disabled = false;
     els.btnOneClickFlow.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click: Buat & Ekspor PNG';
   }
+}
+
+function handleProductImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    state.productImage = e.target.result;
+    els.productPreviewImg.src = state.productImage;
+    els.productPreviewContainer.style.display = 'flex';
+    els.btnClearProduct.style.display = 'block';
+    els.btnUploadProduct.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Foto Produk';
+    showToast('Gambar referensi produk berhasil diunggah!', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearProductImage() {
+  state.productImage = '';
+  els.productImageInput.value = '';
+  els.productPreviewImg.src = '';
+  els.productPreviewContainer.style.display = 'none';
+  els.btnClearProduct.style.display = 'none';
+  els.btnUploadProduct.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Foto Produk';
+  showToast('Gambar referensi produk dihapus.', 'info');
 }
 
 // Start application

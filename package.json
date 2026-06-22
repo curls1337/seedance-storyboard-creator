@@ -1,0 +1,11 @@
+{
+  "name": "seedance-storyboard-creator",
+  "version": "1.0.0",
+  "description": "AI Tool untuk membuat storyboard infografis resep makanan berurutan dan menghasilkan prompt gambar serta gerakan video untuk Seedance.",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {}
+}

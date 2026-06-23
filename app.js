@@ -1435,6 +1435,7 @@ async function generateStoryboardWithAI() {
   if (state.storyboardMode === 'per-frame') {
     systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
 Your task is to take a cooking recipe or video concept and design a step-by-step storyboard consisting of ${state.sceneCount} sequential scenes.
+CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated image prompts. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance in all scenes involving the character to maintain visual consistency.
 For each scene, you must design:
 1. An image prompt ("image_prompt") in English that will generate a clean, high-quality, professional food/beverage photography image representing that scene. The image MUST contain NO text overlays, NO borders, and NO grid lines.
 2. A video prompt ("video_prompt") in English that describes the animation, camera movement, and detail for that specific scene starting from the generated image. Since this is for a single image to video, it should describe the motion starting from the image itself.
@@ -1457,6 +1458,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
 Your task is to take a cooking recipe or video concept and design:
 1. A master grid prompt ("master_grid_prompt") in English that will generate a single vertical storyboard grid image consisting of ${state.sceneCount} sequential vertical panels. The image should be formatted exactly like a cooking video recipe infographic. Each panel must depict a step. Instruct the image generator to draw "SCENE X" (yellow bold text) on the top-left of each panel, timestamps (white text) on the top-right, and a solid black footer directly below each panel containing a bold yellow/gold title in Indonesian and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. Use a dark background and professional food photography style.
+CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated master grid prompt. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance consistently in all panels involving the character.
 2. A single master Seedance prompt ("master_seedance_prompt") in English. This is a unified prompt that will be sent to Seedance along with the uploaded grid image to animate the storyboard. It must describe the chronological animation, camera movement, and visual details for each of the ${state.sceneCount} panels sequentially, referencing the timestamps.
 CRITICAL: You MUST begin the "master_seedance_prompt" with a strong instruction directing the video generator to completely ignore and crop out all grid lines, borders, black footers, text overlays, and labels from the input image, and to zoom in to show only the clean food/beverage and action in full screen. For example, begin with: "IMPORTANT: The input is a storyboard grid with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the food/beverage and action in clean full screen. At the very beginning (0-Xs), start directly with a clean, full-screen cinematic shot of [Scene 1 Description], with absolutely no text or borders visible." and then list the remaining scenes.
 
@@ -1473,19 +1475,22 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       { role: 'system', content: systemPrompt }
     ];
 
+    const isPerFrame = state.storyboardMode === 'per-frame';
+    const storyboardTypeStr = isPerFrame ? 'per-frame' : 'single-prompt master grid';
+
     if (state.productImage || state.characterImage) {
       const userContent = [
-        { type: 'text', text: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}".` }
+        { type: 'text', text: `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}".` }
       ];
       
       let instructions = '';
       if (state.productImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.productImage } });
-        instructions += ' Analyze the product reference image and make sure the generated prompts explicitly describe this specific product, its packaging, and branding details.';
+        instructions += ' Analyze the attached product reference image. You MUST explicitly describe this specific product, its visual features, brand logo, colors, packaging, and branding details in the generated image prompts.';
       }
       if (state.characterImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.characterImage } });
-        instructions += ' Analyze the character reference image and make sure the generated prompts explicitly describe this specific character\'s appearance, face, clothing, and styling consistently across all scenes.';
+        instructions += ' Analyze the attached character reference image. You MUST explicitly and consistently describe this specific character\'s appearance, face, hair style, clothing, and styling in all scenes involving the character.';
       }
       
       userContent[0].text += instructions;
@@ -1497,7 +1502,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     } else {
       messages.push({
         role: 'user',
-        content: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}"`
+        content: `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}"`
       });
     }
 

@@ -58,6 +58,37 @@
         </button>
       </section>
 
+      <!-- Freebeat API Keys Configuration -->
+      <section class="sidebar-section">
+        <div class="section-title">
+          <span>Freebeat API Keys</span>
+          <i class="fa-solid fa-key"></i>
+        </div>
+        
+        <div class="form-group">
+          <label for="freebeat-key-select">Pilih API Key Aktif</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-list-check input-icon"></i>
+            <select id="freebeat-key-select">
+              <option value="" disabled selected>-- Pilih API Key --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="freebeat-active-balance-wrapper" style="display: none; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Balance Aktif:</span>
+            <span id="freebeat-active-balance-display" style="font-size: 14px; font-weight: 700; color: var(--accent-gold);">0 Credits</span>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="btn-manage-freebeat-keys" style="margin-top: 0; flex: 1; font-size: 12px; padding: 8px 12px;" type="button">
+            <i class="fa-solid fa-sliders"></i> Kelola Key & Balance
+          </button>
+        </div>
+      </section>
+
       <!-- Template Selector -->
       <section class="sidebar-section">
         <div class="section-title">
@@ -275,6 +306,120 @@
             </div>
           </div>
 
+          <!-- 4. Freebeat AI Video Generator Card -->
+          <div class="sidebar-section" id="freebeat-video-card" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
+            <div class="section-title">
+              <span>3. Generate Video Dengan Freebeat AI (Video Studio)</span>
+              <i class="fa-solid fa-film"></i>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.4;">
+              Pilih model video dan konfigurasikan setelan untuk me-render gambar storyboard di atas menjadi video real-time menggunakan Freebeat Video Studio API.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label for="freebeat-model-select">Model Video</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-robot input-icon"></i>
+                  <select id="freebeat-model-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                    <option value="94" selected>Pixverse V6 (Premium - 345/495 Credits)</option>
+                    <option value="103">Pixverse C1 (Standard - 7-19 Credits)</option>
+                    <option value="104">Wan V2.7 (Universal - 2-15 Credits)</option>
+                    <option value="102">SeedDance 2.0 (Dynamic - 4-15 Credits)</option>
+                    <option value="101">SeedDance 2.0 Fast (Fast - 4-15 Credits)</option>
+                    <option value="112">Kling V3 4K (Cinematic - 3-15 Credits)</option>
+                    <option value="56">Sora 2 Pro (Ultra Quality - 4-12 Credits)</option>
+                    <option value="111">HappyHorse (Fun/Creative - 3-15 Credits)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="freebeat-aspect-ratio">Aspect Ratio</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-arrows-alt-h input-icon"></i>
+                  <select id="freebeat-aspect-ratio" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                    <option value="9:16" selected>9:16 (Vertikal/TikTok/Reels)</option>
+                    <option value="16:9">16:9 (Horizontal/YouTube)</option>
+                    <option value="1:1">1:1 (Kotak/Instagram)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+              <div class="form-group">
+                <label for="freebeat-duration">Durasi (Detik)</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-clock input-icon"></i>
+                  <input type="number" id="freebeat-duration" value="5" min="2" max="15" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="freebeat-resolution">Resolusi</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-expand input-icon"></i>
+                  <select id="freebeat-resolution" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p (jika didukung)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional: audio generation -->
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="freebeat-generate-audio" style="width: 16px; height: 16px; accent-color: var(--accent-gold);">
+                <span style="font-size: 13px; color: var(--text-primary);">Generate Audio (jika didukung model)</span>
+              </label>
+            </div>
+
+            <!-- Generation Action -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <button class="btn btn-primary" id="btn-generate-freebeat-video" style="padding: 14px;" type="button">
+                <i class="fa-solid fa-video"></i> Mulai Generate Video
+              </button>
+            </div>
+
+            <!-- Video Player Preview / Progress Area -->
+            <div id="freebeat-video-status-container" style="display: none; margin-top: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; background: var(--bg-darker);">
+              
+              <!-- Loader/Progress -->
+              <div id="freebeat-video-loader" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 10px 0;">
+                <div class="spinner"></div>
+                <div class="loading-text" id="freebeat-video-loader-text">Memproses video...</div>
+                <div style="font-size: 11px; color: var(--text-muted); text-align: center;" id="freebeat-video-loader-subtext">Mohon tunggu, proses video biasanya memakan waktu 1-3 menit.</div>
+              </div>
+              
+              <!-- Video Player -->
+              <div id="freebeat-video-player-wrapper" style="display: none; flex-direction: column; align-items: center; gap: 15px;">
+                <h4 style="font-size: 14px; color: var(--accent-gold); display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-circle-check" style="color: var(--accent-green);"></i> Video Berhasil Dibuat!
+                </h4>
+                
+                <div style="width: 100%; max-width: 320px; aspect-ratio: 9/16; background: #000; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                  <video id="freebeat-generated-video" controls style="width: 100%; height: 100%; object-fit: contain;"></video>
+                </div>
+                
+                <div style="display: flex; gap: 12px; width: 100%; justify-content: center;">
+                  <button class="btn btn-secondary" id="btn-download-freebeat-video" style="width: auto; margin-top: 0;" type="button">
+                    <i class="fa-solid fa-download"></i> Unduh Video (MP4)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Error State -->
+              <div id="freebeat-video-error-wrapper" style="display: none; text-align: center; color: var(--accent-red); padding: 10px 0;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 32px; margin-bottom: 10px;"></i>
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Gagal Generate Video</h4>
+                <p id="freebeat-video-error-msg" style="font-size: 12px; color: var(--text-secondary);"></p>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </div>
     </main>
@@ -290,6 +435,48 @@
 
   <!-- Hidden Canvas for Image Compositing Export -->
   <canvas id="export-canvas" style="display: none;"></canvas>
+
+  <!-- Modal Kelola Freebeat Keys -->
+  <div class="modal-overlay" id="freebeat-keys-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 90%; max-width: 550px; padding: 24px; box-shadow: var(--shadow-lg); position: relative;">
+      <button id="btn-close-freebeat-modal" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;" type="button"><i class="fa-solid fa-xmark"></i></button>
+      
+      <h3 style="font-family: 'Outfit', sans-serif; font-size: 20px; color: var(--accent-gold); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-key"></i> Kelola Freebeat API Keys
+      </h3>
+      
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
+        Tambahkan satu atau beberapa API Key Freebeat Anda beserta estimasi balance credits. Anda dapat mengubah nominal balance secara manual untuk melacak penggunaan Anda.
+      </p>
+
+      <!-- Key list -->
+      <div id="freebeat-keys-list-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px; background: var(--bg-darker);">
+        <!-- Dynamically rendered rows -->
+      </div>
+
+      <!-- Add new key form -->
+      <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <h4 style="font-size: 13px; color: var(--text-primary); margin-bottom: 12px;">Tambah API Key Baru</h4>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 2;">
+              <input type="text" id="new-freebeat-key-label" placeholder="Nama Key (misal: Key Utama)" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 12px; font-size: 13px;">
+            </div>
+            <div style="flex: 1;">
+              <input type="number" id="new-freebeat-key-balance" placeholder="Balance Credits" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 12px; font-size: 13px;">
+            </div>
+          </div>
+          <div style="position: relative;">
+            <input type="password" id="new-freebeat-key-val" placeholder="Freebeat API Key (sk-...)" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 36px 8px 12px; font-size: 13px;">
+            <i class="fa-solid fa-key" style="position: absolute; right: 12px; top: 10px; color: var(--text-muted); font-size: 12px;"></i>
+          </div>
+          <button class="btn btn-primary" id="btn-add-freebeat-key" type="button" style="padding: 10px; font-size: 13px; margin-top: 5px;">
+            <i class="fa-solid fa-plus"></i> Tambahkan API Key
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Application Logic -->
   <script src="app.js"></script>

@@ -1022,3 +1022,106 @@ label {
   line-height: 1.5;
   margin-bottom: 24px;
 }
+
+/* Modal Styling */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(7, 8, 15, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+.modal-overlay.active {
+  display: flex;
+  opacity: 1;
+}
+.modal-content {
+  transform: translateY(-20px);
+  transition: transform var(--transition-normal);
+}
+.modal-overlay.active .modal-content {
+  transform: translateY(0);
+}
+.freebeat-key-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+}
+.freebeat-key-item:last-child {
+  border-bottom: none;
+}
+.freebeat-key-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+}
+.freebeat-key-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.freebeat-key-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.freebeat-key-active-badge {
+  font-size: 9px;
+  background-color: var(--accent-gold);
+  color: var(--bg-primary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.freebeat-key-masked {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+.freebeat-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.freebeat-key-balance-input {
+  width: 75px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--accent-gold);
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: right;
+  font-weight: 600;
+}
+.freebeat-key-balance-input:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+.btn-delete-key {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+.btn-delete-key:hover {
+  opacity: 1;
+}
+

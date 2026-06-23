@@ -9,6 +9,7 @@ const state = {
   combinedImage: '',
   textModel: 'gpt-4o-mini',
   imageModel: '108',
+  imageSize: '1024x1024',
   sceneCount: 11,
   productImage: '',
   characterImage: '',
@@ -174,6 +175,7 @@ const els = {
   recipeConcept: document.getElementById('recipe-concept'),
   textModelSelect: document.getElementById('text-model-select'),
   imageModelSelect: document.getElementById('image-model-select'),
+  imageSizeSelect: document.getElementById('image-size-select'),
   sceneCount: document.getElementById('scene-count'),
   sceneCountVal: document.getElementById('scene-count-val'),
   btnGenerateStoryboard: document.getElementById('btn-generate-storyboard'),
@@ -483,6 +485,13 @@ function setupEventListeners() {
   els.btnExportStoryboard.addEventListener('click', downloadCombinedStoryboardImage);
   els.btnUploadCombined.addEventListener('click', () => els.combinedFileInput.click());
   els.combinedFileInput.addEventListener('change', handleCombinedFileUpload);
+  
+  els.imageModelSelect.addEventListener('change', () => {
+    state.imageModel = els.imageModelSelect.value;
+  });
+  els.imageSizeSelect.addEventListener('change', () => {
+    state.imageSize = els.imageSizeSelect.value;
+  });
 
   // Product image events
   els.btnUploadProduct.addEventListener('click', () => els.productImageInput.click());
@@ -1156,8 +1165,10 @@ function loadTemplate(templateId) {
   state.vRefFile = null;
   state.vRefVideo = '';
   state.videoGenerationType = 1;
+  state.imageSize = '1024x1024';
   
   els.freebeatGenerationType.value = "1";
+  els.imageSizeSelect.value = "1024x1024";
   els.freebeatI2vInputs.style.display = 'none';
   els.freebeatV2vInputs.style.display = 'none';
   els.vStartPreviewContainer.style.display = 'none';
@@ -1221,8 +1232,10 @@ function clearStoryboard() {
   state.vRefFile = null;
   state.vRefVideo = '';
   state.videoGenerationType = 1;
+  state.imageSize = '1024x1024';
   
   els.freebeatGenerationType.value = "1";
+  els.imageSizeSelect.value = "1024x1024";
   els.freebeatI2vInputs.style.display = 'none';
   els.freebeatV2vInputs.style.display = 'none';
   
@@ -1436,8 +1449,8 @@ async function generateCombinedStoryboardImage() {
         modelId: String(state.imageModel),
         generationType: 6,
         prompt: prompt,
-        size: "1024x1024",
-        resolution: "1024x1024",
+        size: state.imageSize || "1024x1024",
+        resolution: state.imageSize || "1024x1024",
         quality: "medium",
         count: 1
       }

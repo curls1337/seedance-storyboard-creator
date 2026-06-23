@@ -312,6 +312,37 @@
                   <i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)
                 </button>
               </div>
+
+              <!-- Setelan Gambar (Model & Ukuran) -->
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="image-model-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Model Gambar (Freebeat Image Studio)</label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-robot input-icon" style="font-size: 12px; top: 13px;"></i>
+                    <select id="image-model-select" style="padding-left: 32px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 32px; width: 100%; font-size: 12px;">
+                      <option value="80">Nano Banana 2 (80)</option>
+                      <option value="64">Nano Banana Pro (64)</option>
+                      <option value="99">Wan V2.7 Image (99)</option>
+                      <option value="100">Wan V2.7 Pro Image (100)</option>
+                      <option value="108" selected>GPT-Image 2 (108)</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="image-size-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Ukuran Gambar (Aspect Ratio)</label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-crop input-icon" style="font-size: 12px; top: 13px;"></i>
+                    <select id="image-size-select" style="padding-left: 32px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 32px; width: 100%; font-size: 12px;">
+                      <option value="1024x1024" selected>1:1 (1024x1024)</option>
+                      <option value="1024x576">16:9 (1024x576)</option>
+                      <option value="576x1024">9:16 (576x1024)</option>
+                      <option value="1024x768">4:3 (1024x768)</option>
+                      <option value="768x1024">3:4 (768x1024)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- 3. Master Seedance Video Prompt Card -->
@@ -697,19 +728,7 @@
                   </select>
                 </div>
               </div>
-              <div class="form-group" style="margin-bottom: 24px;">
-                <label for="image-model-select">Model Pembuat Gambar (Image)</label>
-                <div class="input-wrapper">
-                  <i class="fa-solid fa-image input-icon"></i>
-                  <select id="image-model-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
-                    <option value="80">Nano Banana 2 (80)</option>
-                    <option value="64">Nano Banana Pro (64)</option>
-                    <option value="99">Wan V2.7 Image (99)</option>
-                    <option value="100">Wan V2.7 Pro Image (100)</option>
-                    <option value="108" selected>GPT-Image 2 (108)</option>
-                  </select>
-                </div>
-              </div>
+
               <div style="display: flex; gap: 12px;">
                 <button class="btn btn-secondary" id="btn-test-connection" style="margin-top: 0; flex: 1; padding: 12px;" type="button">
                   <i class="fa-solid fa-plug"></i> Tes Koneksi

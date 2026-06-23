@@ -2479,8 +2479,11 @@ function renderFreebeatHistory() {
         </button>
         
         <div style="display: flex; gap: 8px;">
-          ${item.status === 'success' ? (
-            item.type === 'image' ? `
+          ${item.status === 'success' ? `
+            <button class="btn btn-secondary btn-download-hist" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
+              <i class="fa-solid fa-download"></i> Unduh
+            </button>
+            ${item.type === 'image' ? `
               <button class="btn btn-primary btn-use-img" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
                 <i class="fa-solid fa-clapperboard"></i> Pakai Gambar ini
               </button>
@@ -2488,8 +2491,8 @@ function renderFreebeatHistory() {
               <button class="btn btn-primary btn-play" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
                 <i class="fa-solid fa-play"></i> Putar di Player Utama
               </button>
-            `
-          ) : ''}
+            `}
+          ` : ''}
         </div>
       </div>
     `;
@@ -2500,6 +2503,12 @@ function renderFreebeatHistory() {
     });
     
     if (item.status === 'success') {
+      card.querySelector('.btn-download-hist').addEventListener('click', () => {
+        const ext = item.type === 'image' ? 'png' : 'mp4';
+        const safeTitle = (item.recipeTitle || 'file').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        downloadFileFromUrl(item.videoUrl, `${item.type}_${safeTitle}.${ext}`);
+      });
+      
       if (item.type === 'image') {
         card.querySelector('.btn-use-img').addEventListener('click', () => {
           state.combinedImage = item.videoUrl;

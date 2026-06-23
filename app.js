@@ -29,75 +29,58 @@ const state = {
 const modelConfigs = {
   '94': {
     name: 'Pixverse V6',
-    durations: [5, 10],
+    allowedDurations: [5, 10],
     defaultDuration: 5,
-    costs: {
-      5: 345,
-      10: 495
-    }
+    getCost: (d, res) => (res === '1080p' || d > 5) ? 495 : 345
   },
   '103': {
     name: 'Pixverse C1',
-    durations: [5, 10],
-    defaultDuration: 5,
-    costs: {
-      5: 7,
-      10: 19
-    }
+    minDuration: 7,
+    maxDuration: 19,
+    defaultDuration: 10,
+    getCost: () => 10
   },
   '104': {
     name: 'Wan V2.7',
-    durations: [5, 10],
+    minDuration: 2,
+    maxDuration: 15,
     defaultDuration: 5,
-    costs: {
-      5: 2,
-      10: 15
-    }
+    getCost: () => 10
   },
   '102': {
     name: 'SeedDance 2.0',
-    durations: [5, 10],
+    minDuration: 4,
+    maxDuration: 15,
     defaultDuration: 5,
-    costs: {
-      5: 4,
-      10: 15
-    }
+    getCost: () => 12
   },
   '101': {
     name: 'SeedDance 2.0 Fast',
-    durations: [5, 10],
+    minDuration: 4,
+    maxDuration: 15,
     defaultDuration: 5,
-    costs: {
-      5: 4,
-      10: 15
-    }
+    getCost: () => 12
   },
   '112': {
     name: 'Kling V3 4K',
-    durations: [5, 10],
+    minDuration: 3,
+    maxDuration: 15,
     defaultDuration: 5,
-    costs: {
-      5: 3,
-      10: 15
-    }
+    getCost: () => 15
   },
   '56': {
     name: 'Sora 2 Pro',
-    durations: [5, 10],
+    minDuration: 4,
+    maxDuration: 12,
     defaultDuration: 5,
-    costs: {
-      5: 4,
-      10: 12
-    }
+    getCost: () => 20
   },
   '111': {
     name: 'HappyHorse',
-    durations: [5, 10],
+    minDuration: 3,
+    maxDuration: 15,
     defaultDuration: 5,
-    costs: {
-      5: 3,
-      10: 15
-    }
+    getCost: () => 10
   }
 };
 
@@ -310,6 +293,7 @@ function setupEventListeners() {
   // Dynamic duration and cost calculation listeners
   els.freebeatModelSelect.addEventListener('change', updateDurationOptionsAndCost);
   els.freebeatDuration.addEventListener('change', updateEstimatedCostUI);
+  els.freebeatResolution.addEventListener('change', updateEstimatedCostUI);
 }
 
 // Check connection quietly on load
@@ -951,7 +935,17 @@ function updateDurationOptionsAndCost() {
   const currentDuration = parseInt(els.freebeatDuration.value, 10) || 5;
   
   els.freebeatDuration.innerHTML = '';
-  config.durations.forEach(d => {
+  
+  let durations = [];
+  if (config.allowedDurations) {
+    durations = config.allowedDurations;
+  } else {
+    for (let d = config.minDuration; d <= config.maxDuration; d++) {
+      durations.push(d);
+    }
+  }
+  
+  durations.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d;
     opt.textContent = `${d} Detik`;
@@ -961,8 +955,9 @@ function updateDurationOptionsAndCost() {
     els.freebeatDuration.appendChild(opt);
   });
   
-  if (!config.durations.includes(currentDuration)) {
-    els.freebeatDuration.value = config.defaultDuration;
+  const defaultDuration = config.defaultDuration || config.minDuration || 5;
+  if (!durations.includes(currentDuration)) {
+    els.freebeatDuration.value = defaultDuration;
   }
   
   updateEstimatedCostUI();
@@ -971,7 +966,8 @@ function updateDurationOptionsAndCost() {
 function updateEstimatedCostUI() {
   const modelId = els.freebeatModelSelect.value;
   const duration = parseInt(els.freebeatDuration.value, 10) || 5;
-  const cost = getEstimatedCreditCost(modelId, duration);
+  const resolution = els.freebeatResolution.value || '720p';
+  const cost = getEstimatedCreditCost(modelId, duration, resolution);
   
   const costDisplay = document.getElementById('freebeat-estimated-cost');
   if (costDisplay) {
@@ -980,16 +976,11 @@ function updateEstimatedCostUI() {
 }
 
 // Freebeat Video Studio API helpers
-function getEstimatedCreditCost(modelId, duration) {
-  const d = parseInt(duration, 10) || 5;
-  if (modelId === '94') return d <= 5 ? 345 : 495;
-  if (modelId === '103') return d <= 5 ? 7 : 19;
-  if (modelId === '104') return d <= 5 ? 2 : 15;
-  if (modelId === '102') return d <= 5 ? 4 : 15;
-  if (modelId === '101') return d <= 5 ? 4 : 15;
-  if (modelId === '112') return d <= 5 ? 3 : 15;
-  if (modelId === '56') return d <= 5 ? 4 : 12;
-  if (modelId === '111') return d <= 5 ? 3 : 15;
+function getEstimatedCreditCost(modelId, duration, resolution) {
+  const config = modelConfigs[modelId];
+  if (config) {
+    return config.getCost(parseInt(duration, 10) || 5, resolution || '720p');
+  }
   return 10;
 }
 
@@ -1019,7 +1010,7 @@ function loadFreebeatHistory() {
       if (activeKey) {
         state.freebeatHistory.forEach(item => {
           if (item.status === 'processing') {
-            const cost = getEstimatedCreditCost(item.modelId, item.duration);
+            const cost = getEstimatedCreditCost(item.modelId, item.duration, item.resolution);
             startFreebeatVideoPolling(item.id, activeKey, cost);
           }
         });
@@ -1195,7 +1186,7 @@ async function handleGenerateFreebeatVideo() {
   const generate_audio = els.freebeatGenerateAudio.checked;
   const audioValue = generate_audio ? 1 : 0;
   
-  const estimatedCost = getEstimatedCreditCost(modelId, duration);
+  const estimatedCost = getEstimatedCreditCost(modelId, duration, resolution);
   if (activeKey.balance !== null && activeKey.balance !== undefined && activeKey.balance < estimatedCost) {
     showToast(`Balance tidak mencukupi! Estimasi biaya: ${estimatedCost} credits, Balance Anda: ${activeKey.balance} credits.`, 'error');
     return;

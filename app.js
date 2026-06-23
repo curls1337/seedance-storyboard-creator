@@ -176,6 +176,7 @@ const els = {
   storyboardDisplayMeta: document.getElementById('storyboard-display-meta'),
   
   // Combined Image Elements
+  btnClearStoryboard: document.getElementById('btn-clear-storyboard'),
   combinedStoryboardImage: document.getElementById('combined-storyboard-image'),
   combinedImagePlaceholder: document.getElementById('combined-image-placeholder'),
   combinedImageLoader: document.getElementById('combined-image-loader'),
@@ -427,6 +428,7 @@ function setupEventListeners() {
   });
 
   els.btnGenerateStoryboard.addEventListener('click', generateStoryboardWithAI);
+  els.btnClearStoryboard.addEventListener('click', clearStoryboard);
   els.btnOneClickFlow.addEventListener('click', runOneClickFlow);
   els.btnQuickLoadNyemek.addEventListener('click', () => loadTemplate('indomie-nyemek'));
   
@@ -1101,11 +1103,51 @@ function loadTemplate(templateId) {
   // Show UI elements
   els.storyboardEmptyState.style.display = 'none';
   els.storyboardPreviewWrapper.style.display = 'flex';
+  els.btnClearStoryboard.style.display = 'flex';
   els.storyboardDisplayTitle.textContent = state.storyboardTitle;
   els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${defaultCount} Langkah`;
   
   // Reset select option
   els.templateSelect.value = templateId;
+}
+
+// Clear Storyboard Creator State & Views
+function clearStoryboard() {
+  state.storyboardTitle = '';
+  state.masterGridPrompt = '';
+  state.masterSeedancePrompt = '';
+  state.combinedImage = '';
+  
+  // Clear inputs
+  els.recipeConcept.value = '';
+  els.templateSelect.value = '';
+  
+  // Clear product reference image if any
+  if (state.productImage) {
+    clearProductImage();
+  }
+  
+  // Clear prompts
+  els.masterGridPrompt.value = '';
+  els.masterSeedancePrompt.value = '';
+  
+  // Reset combined image view
+  els.combinedStoryboardImage.src = '';
+  els.combinedStoryboardImage.style.display = 'none';
+  els.combinedImagePlaceholder.style.display = 'flex';
+  els.btnDownloadCombined.disabled = true;
+  els.btnExportStoryboard.disabled = true;
+  
+  // Hide video preview/status if open
+  els.freebeatVideoStatusContainer.style.display = 'none';
+  els.freebeatGeneratedVideo.src = '';
+  
+  // Toggle Visibility
+  els.storyboardPreviewWrapper.style.display = 'none';
+  els.storyboardEmptyState.style.display = 'block';
+  els.btnClearStoryboard.style.display = 'none';
+  
+  showToast('Storyboard berhasil dibersihkan.', 'success');
 }
 
 // Copy Master Grid Prompt
@@ -1218,6 +1260,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     // Show Preview Wrapper
     els.storyboardEmptyState.style.display = 'none';
     els.storyboardPreviewWrapper.style.display = 'flex';
+    els.btnClearStoryboard.style.display = 'flex';
     els.storyboardDisplayTitle.textContent = state.storyboardTitle;
     els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${state.sceneCount} Langkah`;
     

@@ -141,7 +141,7 @@
           </div>
 
           <div class="form-group">
-            <label for="product-image-input">Gambar Referensi (Opsional)</label>
+            <label for="product-image-input">Gambar Referensi Produk (Opsional)</label>
             <div class="input-wrapper" style="flex-direction: column; align-items: stretch; gap: 8px;">
               <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
                 <button class="btn btn-secondary" id="btn-upload-product" style="margin-top: 0; flex: 1; font-size: 12px; padding: 8px 12px;" type="button">
@@ -154,6 +154,24 @@
               <input type="file" id="product-image-input" style="display: none;" accept="image/*">
               <div id="product-preview-container" style="display: none; width: 100%; border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 8px; align-items: center; justify-content: center; background: var(--bg-darker);">
                 <img id="product-preview-img" style="max-width: 100%; max-height: 120px; border-radius: var(--radius-sm); object-fit: contain;">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="character-image-input">Gambar Referensi Karakter (Opsional)</label>
+            <div class="input-wrapper" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                <button class="btn btn-secondary" id="btn-upload-character" style="margin-top: 0; flex: 1; font-size: 12px; padding: 8px 12px;" type="button">
+                  <i class="fa-solid fa-user-astronaut"></i> Upload Foto Karakter
+                </button>
+                <button class="btn btn-secondary" id="btn-clear-character" style="margin-top: 0; width: 40px; display: none; background: #c0392b; border-color: #c0392b; color: white;" type="button" title="Hapus Gambar Karakter">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+              <input type="file" id="character-image-input" style="display: none;" accept="image/*">
+              <div id="character-preview-container" style="display: none; width: 100%; border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 8px; align-items: center; justify-content: center; background: var(--bg-darker);">
+                <img id="character-preview-img" style="max-width: 100%; max-height: 120px; border-radius: var(--radius-sm); object-fit: contain;">
               </div>
             </div>
           </div>

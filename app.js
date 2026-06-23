@@ -11,6 +11,7 @@ const state = {
   imageModel: 'gemini-3.1-flash-image',
   sceneCount: 11,
   productImage: '',
+  characterImage: '',
   
   // Freebeat Keys State
   freebeatKeys: [], // [{ id: 'uuid', label: 'My Key', key: 'sk-...', balance: 1000 }]
@@ -201,6 +202,13 @@ const els = {
   btnClearProduct: document.getElementById('btn-clear-product'),
   productPreviewContainer: document.getElementById('product-preview-container'),
   productPreviewImg: document.getElementById('product-preview-img'),
+  
+  // Character image elements
+  characterImageInput: document.getElementById('character-image-input'),
+  btnUploadCharacter: document.getElementById('btn-upload-character'),
+  btnClearCharacter: document.getElementById('btn-clear-character'),
+  characterPreviewContainer: document.getElementById('character-preview-container'),
+  characterPreviewImg: document.getElementById('character-preview-img'),
   
   // Toast Notification
   toastNotification: document.getElementById('toast-notification'),
@@ -445,6 +453,11 @@ function setupEventListeners() {
   els.btnUploadProduct.addEventListener('click', () => els.productImageInput.click());
   els.productImageInput.addEventListener('change', handleProductImageUpload);
   els.btnClearProduct.addEventListener('click', clearProductImage);
+
+  // Character image events
+  els.btnUploadCharacter.addEventListener('click', () => els.characterImageInput.click());
+  els.characterImageInput.addEventListener('change', handleCharacterImageUpload);
+  els.btnClearCharacter.addEventListener('click', clearCharacterImage);
 
   // Template select
   els.templateSelect.addEventListener('change', () => {
@@ -1127,6 +1140,11 @@ function clearStoryboard() {
     clearProductImage();
   }
   
+  // Clear character reference image if any
+  if (state.characterImage) {
+    clearCharacterImage();
+  }
+  
   // Clear prompts
   els.masterGridPrompt.value = '';
   els.masterSeedancePrompt.value = '';
@@ -1205,13 +1223,26 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       { role: 'system', content: systemPrompt }
     ];
 
-    if (state.productImage) {
+    if (state.productImage || state.characterImage) {
+      const userContent = [
+        { type: 'text', text: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}".` }
+      ];
+      
+      let instructions = '';
+      if (state.productImage) {
+        userContent.push({ type: 'image_url', image_url: { url: state.productImage } });
+        instructions += ' Analyze the product reference image and make sure the generated prompts explicitly describe this specific product, its packaging, and branding details.';
+      }
+      if (state.characterImage) {
+        userContent.push({ type: 'image_url', image_url: { url: state.characterImage } });
+        instructions += ' Analyze the character reference image and make sure the generated prompts explicitly describe this specific character\'s appearance, face, clothing, and styling consistently across all scenes.';
+      }
+      
+      userContent[0].text += instructions;
+      
       messages.push({
         role: 'user',
-        content: [
-          { type: 'text', text: `Create a single-prompt storyboard with ${state.sceneCount} steps for: "${concept}". Analyze the product reference image and make sure the generated prompt explicitly describes this specific product, its packaging, and branding details.` },
-          { type: 'image_url', image_url: { url: state.productImage } }
-        ]
+        content: userContent
       });
     } else {
       messages.push({
@@ -1448,6 +1479,32 @@ function clearProductImage() {
   els.btnClearProduct.style.display = 'none';
   els.btnUploadProduct.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Foto Produk';
   showToast('Gambar referensi produk dihapus.', 'info');
+}
+
+function handleCharacterImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    state.characterImage = e.target.result;
+    els.characterPreviewImg.src = state.characterImage;
+    els.characterPreviewContainer.style.display = 'flex';
+    els.btnClearCharacter.style.display = 'block';
+    els.btnUploadCharacter.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Ganti Foto Karakter';
+    showToast('Gambar referensi karakter berhasil diunggah!', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearCharacterImage() {
+  state.characterImage = '';
+  els.characterImageInput.value = '';
+  els.characterPreviewImg.src = '';
+  els.characterPreviewContainer.style.display = 'none';
+  els.btnClearCharacter.style.display = 'none';
+  els.btnUploadCharacter.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Upload Foto Karakter';
+  showToast('Gambar referensi karakter dihapus.', 'info');
 }
 
 // ----------------------------------------------------

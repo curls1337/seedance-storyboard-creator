@@ -419,6 +419,15 @@ app.all('/proxy', requireLogin, async (req, res) => {
   }
   headers['user-agent'] = req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
+  let bodyData = null;
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0;
+  if (hasBody) {
+    bodyData = JSON.stringify(req.body);
+    headers['content-length'] = Buffer.byteLength(bodyData);
+  } else {
+    delete headers['content-length'];
+  }
+
   const options = {
     hostname: parsedUrl.hostname,
     port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
@@ -427,17 +436,24 @@ app.all('/proxy', requireLogin, async (req, res) => {
     headers: headers
   };
 
+  console.log(`[Proxy Request] Method: ${options.method}, URL: ${targetUrl}`);
+  console.log(`[Proxy Headers] Sent:`, JSON.stringify({ ...headers, authorization: headers.authorization ? headers.authorization.substring(0, 15) + '...' : undefined }));
+
   const clientReq = clientModule.request(options, (clientRes) => {
+    console.log(`[Proxy Response] Status: ${clientRes.statusCode}`);
     res.writeHead(clientRes.statusCode, clientRes.headers);
     clientRes.pipe(res);
   });
 
   clientReq.on('error', (err) => {
-    console.error('Proxy Error:', err);
+    console.error('[Proxy Error] Request failed:', err);
     res.status(500).json({ error: 'Proxy request failed', details: err.message });
   });
 
-  req.pipe(clientReq);
+  if (hasBody && bodyData) {
+    clientReq.write(bodyData);
+  }
+  clientReq.end();
 });
 
 // ----------------------------------------------------

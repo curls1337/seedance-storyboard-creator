@@ -38,49 +38,49 @@ const modelConfigs = {
     minDuration: 7,
     maxDuration: 19,
     defaultDuration: 10,
-    getCost: () => 10
+    getCost: (d) => d
   },
   '104': {
     name: 'Wan V2.7',
     minDuration: 2,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: () => 10
+    getCost: (d) => d
   },
   '102': {
     name: 'SeedDance 2.0',
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: () => 12
+    getCost: (d) => d
   },
   '101': {
     name: 'SeedDance 2.0 Fast',
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: () => 12
+    getCost: (d) => d
   },
   '112': {
     name: 'Kling V3 4K',
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: () => 15
+    getCost: (d) => d
   },
   '56': {
     name: 'Sora 2 Pro',
     minDuration: 4,
     maxDuration: 12,
     defaultDuration: 5,
-    getCost: () => 20
+    getCost: (d) => d
   },
   '111': {
     name: 'HappyHorse',
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: () => 10
+    getCost: (d) => d
   }
 };
 

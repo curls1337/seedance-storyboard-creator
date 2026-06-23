@@ -2333,34 +2333,66 @@ async function handleGenerateFreebeatVideo() {
       // Image-to-Video
       const startRef = state.vStartFile || state.vStartImage;
       const endRef = state.vEndFile || state.vEndImage;
-      if (!startRef || !endRef) {
-        throw new Error('Gambar Awal dan Gambar Akhir wajib ditentukan untuk mode Image-to-Video.');
+      if (!startRef && !endRef) {
+        throw new Error('Minimal satu gambar referensi (Gambar Awal atau Gambar Akhir) wajib ditentukan untuk mode Image-to-Video.');
       }
 
       let startUrl = '';
-      if (state.vStartFile) {
-        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
-        startUrl = await uploadFileToFreebeat(state.vStartFile, 'agent/character');
-      } else if (state.vStartImage.startsWith('data:image/')) {
-        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
-        const blob = dataURLtoBlob(state.vStartImage);
-        const file = new File([blob], 'start_frame.png', { type: blob.type });
-        startUrl = await uploadFileToFreebeat(file, 'agent/character');
-      } else {
-        startUrl = state.vStartImage;
-      }
-
       let endUrl = '';
-      if (state.vEndFile) {
-        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
-        endUrl = await uploadFileToFreebeat(state.vEndFile, 'agent/character');
-      } else if (state.vEndImage.startsWith('data:image/')) {
-        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
-        const blob = dataURLtoBlob(state.vEndImage);
-        const file = new File([blob], 'end_frame.png', { type: blob.type });
-        endUrl = await uploadFileToFreebeat(file, 'agent/character');
+
+      if (startRef && endRef) {
+        // Both images provided
+        if (state.vStartFile) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+          startUrl = await uploadFileToFreebeat(state.vStartFile, 'agent/character');
+        } else if (state.vStartImage.startsWith('data:image/')) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+          const blob = dataURLtoBlob(state.vStartImage);
+          const file = new File([blob], 'start_frame.png', { type: blob.type });
+          startUrl = await uploadFileToFreebeat(file, 'agent/character');
+        } else {
+          startUrl = state.vStartImage;
+        }
+
+        if (state.vEndFile) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+          endUrl = await uploadFileToFreebeat(state.vEndFile, 'agent/character');
+        } else if (state.vEndImage.startsWith('data:image/')) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+          const blob = dataURLtoBlob(state.vEndImage);
+          const file = new File([blob], 'end_frame.png', { type: blob.type });
+          endUrl = await uploadFileToFreebeat(file, 'agent/character');
+        } else {
+          endUrl = state.vEndImage;
+        }
+      } else if (startRef) {
+        // Only start image provided (duplicate to end image)
+        if (state.vStartFile) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+          startUrl = await uploadFileToFreebeat(state.vStartFile, 'agent/character');
+        } else if (state.vStartImage.startsWith('data:image/')) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+          const blob = dataURLtoBlob(state.vStartImage);
+          const file = new File([blob], 'start_frame.png', { type: blob.type });
+          startUrl = await uploadFileToFreebeat(file, 'agent/character');
+        } else {
+          startUrl = state.vStartImage;
+        }
+        endUrl = startUrl;
       } else {
-        endUrl = state.vEndImage;
+        // Only end image provided (duplicate to start image)
+        if (state.vEndFile) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+          endUrl = await uploadFileToFreebeat(state.vEndFile, 'agent/character');
+        } else if (state.vEndImage.startsWith('data:image/')) {
+          els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+          const blob = dataURLtoBlob(state.vEndImage);
+          const file = new File([blob], 'end_frame.png', { type: blob.type });
+          endUrl = await uploadFileToFreebeat(file, 'agent/character');
+        } else {
+          endUrl = state.vEndImage;
+        }
+        startUrl = endUrl;
       }
 
       itemData.images = [startUrl, endUrl];

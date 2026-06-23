@@ -255,13 +255,15 @@ const els = {
 
   // I2V Inputs
   btnUploadVStart: document.getElementById('btn-upload-v-start'),
-  btnUseStoryboardStart: document.getElementById('btn-use-storyboard-start'),
+  btnUseStoryboardStart1: document.getElementById('btn-use-storyboard-start-1'),
+  btnUseStoryboardStart2: document.getElementById('btn-use-storyboard-start-2'),
   freebeatVStartInput: document.getElementById('freebeat-v-start-input'),
   vStartPreviewContainer: document.getElementById('v-start-preview-container'),
   vStartPreviewImg: document.getElementById('v-start-preview-img'),
 
   btnUploadVEnd: document.getElementById('btn-upload-v-end'),
-  btnUseStoryboardEnd: document.getElementById('btn-use-storyboard-end'),
+  btnUseStoryboardEnd1: document.getElementById('btn-use-storyboard-end-1'),
+  btnUseStoryboardEnd2: document.getElementById('btn-use-storyboard-end-2'),
   freebeatVEndInput: document.getElementById('freebeat-v-end-input'),
   vEndPreviewContainer: document.getElementById('v-end-preview-container'),
   vEndPreviewImg: document.getElementById('v-end-preview-img'),
@@ -532,11 +534,13 @@ function setupEventListeners() {
   // I2V event listeners
   els.btnUploadVStart.addEventListener('click', () => els.freebeatVStartInput.click());
   els.freebeatVStartInput.addEventListener('change', handleVStartImageUpload);
-  els.btnUseStoryboardStart.addEventListener('click', handleUseStoryboardStart);
+  els.btnUseStoryboardStart1.addEventListener('click', () => handleUseStoryboardStart(1));
+  els.btnUseStoryboardStart2.addEventListener('click', () => handleUseStoryboardStart(2));
 
   els.btnUploadVEnd.addEventListener('click', () => els.freebeatVEndInput.click());
   els.freebeatVEndInput.addEventListener('change', handleVEndImageUpload);
-  els.btnUseStoryboardEnd.addEventListener('click', handleUseStoryboardEnd);
+  els.btnUseStoryboardEnd1.addEventListener('click', () => handleUseStoryboardEnd(1));
+  els.btnUseStoryboardEnd2.addEventListener('click', () => handleUseStoryboardEnd(2));
 
   // V2V event listeners
   els.btnUploadVRef.addEventListener('click', () => els.freebeatVRefInput.click());
@@ -1162,8 +1166,12 @@ function loadTemplate(templateId) {
   
   // Reset image
   state.combinedImage = '';
+  state.combinedImage2 = '';
+  state.imageCount = 1;
   els.combinedStoryboardImage.src = '';
   els.combinedStoryboardImage.style.display = 'none';
+  els.combinedStoryboardImage2.src = '';
+  els.combinedStoryboardImage2.style.display = 'none';
   els.combinedImagePlaceholder.style.display = 'flex';
   els.btnDownloadCombined.disabled = true;
   els.btnExportStoryboard.disabled = true;
@@ -1180,12 +1188,19 @@ function loadTemplate(templateId) {
   
   els.freebeatGenerationType.value = "1";
   els.imageSizeSelect.value = "1024x1024";
+  els.imageCountSelect.value = "1";
   els.freebeatI2vInputs.style.display = 'none';
   els.freebeatV2vInputs.style.display = 'none';
   els.vStartPreviewContainer.style.display = 'none';
   els.vEndPreviewContainer.style.display = 'none';
   els.vRefPreviewContainer.style.display = 'none';
   els.freebeatVRefUrl.value = '';
+  els.lblStoryboardImg1.style.display = 'none';
+  els.storyboardImg2Wrapper.style.display = 'none';
+  els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
+  els.storyboardImagesContainer.style.display = 'none';
+  els.btnUseStoryboardStart2.style.display = 'none';
+  els.btnUseStoryboardEnd2.style.display = 'none';
   
   // Set prompts editor values
   els.masterGridPrompt.value = state.masterGridPrompt;
@@ -1277,6 +1292,9 @@ function clearStoryboard() {
   els.storyboardImg2Wrapper.style.display = 'none';
   els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
   els.storyboardImagesContainer.style.display = 'none';
+  
+  els.btnUseStoryboardStart2.style.display = 'none';
+  els.btnUseStoryboardEnd2.style.display = 'none';
   
   els.combinedImagePlaceholder.style.display = 'flex';
   els.btnDownloadCombined.disabled = true;
@@ -1581,22 +1599,31 @@ function startFreebeatImagePolling(batchId, activeKey) {
           
           state.combinedImage = imgUrl1;
           els.combinedStoryboardImage.src = imgUrl1;
+          els.combinedStoryboardImage.style.display = 'block';
           
           if (items.length > 1) {
             const imgUrl2 = successes[1].imageUrl;
             if (imgUrl2) {
               state.combinedImage2 = imgUrl2;
               els.combinedStoryboardImage2.src = imgUrl2;
+              els.combinedStoryboardImage2.style.display = 'block';
               els.lblStoryboardImg1.style.display = 'block';
               els.storyboardImg2Wrapper.style.display = 'block';
               els.storyboardImagesGrid.style.gridTemplateColumns = '1fr 1fr';
+              
+              els.btnUseStoryboardStart2.style.display = 'inline-block';
+              els.btnUseStoryboardEnd2.style.display = 'inline-block';
             }
           } else {
             state.combinedImage2 = '';
             els.combinedStoryboardImage2.src = '';
+            els.combinedStoryboardImage2.style.display = 'none';
             els.lblStoryboardImg1.style.display = 'none';
             els.storyboardImg2Wrapper.style.display = 'none';
             els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
+            
+            els.btnUseStoryboardStart2.style.display = 'none';
+            els.btnUseStoryboardEnd2.style.display = 'none';
           }
           
           els.storyboardImagesContainer.style.display = 'block';
@@ -1791,18 +1818,19 @@ function handleVStartImageUpload(event) {
   reader.readAsDataURL(file);
 }
 
-function handleUseStoryboardStart() {
-  if (!state.combinedImage) {
-    showToast('Gambar storyboard kosong! Silakan generate storyboard terlebih dahulu.', 'error');
+function handleUseStoryboardStart(imgNum = 1) {
+  const targetImage = imgNum === 2 ? state.combinedImage2 : state.combinedImage;
+  if (!targetImage) {
+    showToast(`Gambar storyboard ${imgNum} kosong! Silakan generate storyboard terlebih dahulu.`, 'error');
     return;
   }
   state.vStartFile = null;
-  state.vStartImage = state.combinedImage;
+  state.vStartImage = targetImage;
   
-  els.vStartPreviewImg.src = state.combinedImage;
+  els.vStartPreviewImg.src = targetImage;
   els.vStartPreviewContainer.style.display = 'flex';
-  els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Gambar Awal';
-  showToast('Menggunakan gambar storyboard sebagai Gambar Awal!', 'success');
+  els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Awal';
+  showToast(`Menggunakan Gambar ${imgNum} Storyboard sebagai Gambar Awal!`, 'success');
 }
 
 function handleVEndImageUpload(event) {
@@ -1822,8 +1850,9 @@ function handleVEndImageUpload(event) {
   reader.readAsDataURL(file);
 }
 
-function handleUseStoryboardEnd() {
-  const targetImage = state.combinedImage2 || state.combinedImage;
+function handleUseStoryboardEnd(imgNum = 2) {
+  const actualNum = (imgNum === 2 && !state.combinedImage2) ? 1 : imgNum;
+  const targetImage = actualNum === 2 ? state.combinedImage2 : state.combinedImage;
   if (!targetImage) {
     showToast('Gambar storyboard kosong! Silakan generate storyboard terlebih dahulu.', 'error');
     return;
@@ -1835,11 +1864,7 @@ function handleUseStoryboardEnd() {
   els.vEndPreviewContainer.style.display = 'flex';
   els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Akhir';
   
-  if (state.combinedImage2) {
-    showToast('Menggunakan Gambar 2 Storyboard sebagai Gambar Akhir!', 'success');
-  } else {
-    showToast('Menggunakan Gambar 1 Storyboard sebagai Gambar Akhir!', 'success');
-  }
+  showToast(`Menggunakan Gambar ${actualNum} Storyboard sebagai Gambar Akhir!`, 'success');
 }
 
 // V2V Video Handler

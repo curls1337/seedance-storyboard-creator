@@ -330,7 +330,7 @@ async function refreshSessionUserCredits() {
 // Populate dropdown from templates.js
 function populateTemplateDropdown() {
   if (!els.templateSelect) return;
-  els.templateSelect.innerHTML = '<option value="" disabled selected>-- Pilih Template Storyboard --</option>';
+  els.templateSelect.innerHTML = '<option value="" disabled selected>-- Pilih Gaya / Format Video --</option>';
   Object.entries(templates).forEach(([id, tpl]) => {
     const opt = document.createElement('option');
     opt.value = id;
@@ -1473,7 +1473,8 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     let userText = `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}".`;
     if (selectedTemplateId && templates[selectedTemplateId]) {
       const tpl = templates[selectedTemplateId];
-      userText += `\n\nNote: You should base the storyboard on the following predefined template scenes, but adapt them to incorporate the visual features of the uploaded reference images if provided:\n`;
+      userText += `\n\nCRITICAL STYLE DIRECTION: You MUST format and structure the storyboard according to the "${tpl.title}" style guidelines:\n${tpl.instructions}\n`;
+      userText += `\nHere are the baseline scene flows of the style for your reference:\n`;
       tpl.scenes.forEach((s, i) => {
         userText += `Scene ${i+1}: ${s.title}\n- Image Prompt Base: ${s.image_prompt}\n- Video Prompt Base: ${s.video_prompt}\n`;
       });

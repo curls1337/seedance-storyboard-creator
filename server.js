@@ -255,8 +255,9 @@ app.delete('/api/freebeat-keys/:id', requireAdmin, async (req, res) => {
 // ----------------------------------------------------
 
 app.get('/api/history', requireLogin, async (req, res) => {
+  const user = req.session.user;
   try {
-    const result = await pool.query('SELECT * FROM history ORDER BY timestamp DESC');
+    const result = await pool.query('SELECT * FROM history WHERE user_id = $1 ORDER BY timestamp DESC', [user.id]);
     // Map db columns back to frontend state format
     const history = result.rows.map(row => ({
       id: row.id,
@@ -281,12 +282,13 @@ app.get('/api/history', requireLogin, async (req, res) => {
 
 app.post('/api/history', requireLogin, async (req, res) => {
   const item = req.body;
+  const user = req.session.user;
   try {
     await pool.query(
-      `INSERT INTO history (id, recipe_title, prompt, model_id, duration, resolution, aspect_ratio, generate_audio, timestamp, status, video_url, error_msg) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+      `INSERT INTO history (id, recipe_title, prompt, model_id, duration, resolution, aspect_ratio, generate_audio, timestamp, status, video_url, error_msg, user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
        ON CONFLICT (id) DO UPDATE 
-       SET status = $10, video_url = $11, error_msg = $12`,
+       SET status = $10, video_url = $11, error_msg = $12, user_id = $13`,
       [
         item.id,
         item.recipeTitle,
@@ -299,7 +301,8 @@ app.post('/api/history', requireLogin, async (req, res) => {
         BigInt(item.timestamp),
         item.status,
         item.videoUrl || null,
-        item.errorMsg || null
+        item.errorMsg || null,
+        user.id
       ]
     );
     res.json({ success: true });

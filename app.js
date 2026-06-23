@@ -18,7 +18,11 @@ const state = {
   freebeatKeys: [], // [{ id: 'uuid', label: 'My Key', key: 'sk-...', balance: 1000 }]
   activeFreebeatKeyId: '',
   freebeatVideoTaskId: null,
-  freebeatVideoPollingInterval: null
+  freebeatVideoPollingInterval: null,
+  
+  // History and Multiple Polling State
+  freebeatHistory: [], // [{ id: 'batchId', recipeTitle: '...', prompt: '...', modelId: '...', duration: 5, resolution: '720p', aspectRatio: '9:16', generateAudio: false, timestamp: 1234567, status: 'success'/'failed'/'processing', videoUrl: '...', errorMsg: '...' }]
+  freebeatVideoIntervals: {} // { batchId: intervalId }
 };
 
 // Built-in Templates Data
@@ -132,7 +136,12 @@ const els = {
   freebeatGeneratedVideo: document.getElementById('freebeat-generated-video'),
   btnDownloadFreebeatVideo: document.getElementById('btn-download-freebeat-video'),
   freebeatVideoErrorWrapper: document.getElementById('freebeat-video-error-wrapper'),
-  freebeatVideoErrorMsg: document.getElementById('freebeat-video-error-msg')
+  freebeatVideoErrorMsg: document.getElementById('freebeat-video-error-msg'),
+  
+  // Freebeat Video History Elements
+  freebeatHistoryList: document.getElementById('freebeat-history-list'),
+  btnClearFreebeatHistory: document.getElementById('btn-clear-freebeat-history'),
+  btnRefreshFreebeatBalance: document.getElementById('btn-refresh-freebeat-balance')
 };
 
 // Initialization
@@ -143,6 +152,8 @@ function init() {
   
   // Load Freebeat Keys
   loadFreebeatKeys();
+  // Load Freebeat History
+  loadFreebeatHistory();
 }
 
 // Sync Form Inputs to State
@@ -215,6 +226,8 @@ function setupEventListeners() {
   els.freebeatKeySelect.addEventListener('change', handleSelectFreebeatKey);
   els.btnGenerateFreebeatVideo.addEventListener('click', handleGenerateFreebeatVideo);
   els.btnDownloadFreebeatVideo.addEventListener('click', downloadFreebeatVideo);
+  els.btnClearFreebeatHistory.addEventListener('click', clearFreebeatHistory);
+  els.btnRefreshFreebeatBalance.addEventListener('click', autoDetectFreebeatBalance);
 }
 
 // Check connection quietly on load
@@ -854,6 +867,188 @@ function getEstimatedCreditCost(modelId, duration, resolution) {
   return 10;
 }
 
+function getModelDisplayName(modelId) {
+  const modelMap = {
+    '94': 'Pixverse V6',
+    '103': 'Pixverse C1',
+    '104': 'Wan V2.7',
+    '102': 'SeedDance 2.0',
+    '101': 'SeedDance 2.0 Fast',
+    '112': 'Kling V3 4K',
+    '56': 'Sora 2 Pro',
+    '111': 'HappyHorse'
+  };
+  return modelMap[modelId] || `Model ${modelId}`;
+}
+
+// Freebeat Video History functions
+function loadFreebeatHistory() {
+  try {
+    const saved = localStorage.getItem('freebeat_history');
+    if (saved) {
+      state.freebeatHistory = JSON.parse(saved);
+      
+      // Resume polling for any unfinished tasks
+      const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+      if (activeKey) {
+        state.freebeatHistory.forEach(item => {
+          if (item.status === 'processing') {
+            const cost = getEstimatedCreditCost(item.modelId, item.duration, item.resolution);
+            startFreebeatVideoPolling(item.id, activeKey, cost);
+          }
+        });
+      }
+    } else {
+      state.freebeatHistory = [];
+    }
+    renderFreebeatHistory();
+  } catch (err) {
+    console.error('Error loading history:', err);
+    state.freebeatHistory = [];
+  }
+}
+
+function saveFreebeatHistory() {
+  localStorage.setItem('freebeat_history', JSON.stringify(state.freebeatHistory));
+}
+
+function renderFreebeatHistory() {
+  if (!els.freebeatHistoryList) return;
+  els.freebeatHistoryList.innerHTML = '';
+  
+  if (state.freebeatHistory.length === 0) {
+    els.freebeatHistoryList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 12px 0;">Belum ada riwayat generate video.</div>';
+    return;
+  }
+  
+  // Sort history: newest first
+  const sorted = [...state.freebeatHistory].sort((a, b) => b.timestamp - a.timestamp);
+  
+  sorted.forEach(item => {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.flexDirection = 'column';
+    row.style.gap = '8px';
+    row.style.padding = '12px';
+    row.style.background = 'var(--bg-darker)';
+    row.style.border = '1px solid var(--border-color)';
+    row.style.borderRadius = 'var(--radius-sm)';
+    row.style.fontSize = '12px';
+    row.style.marginBottom = '8px';
+    
+    // Status Badge
+    let statusBadge = '';
+    if (item.status === 'success') {
+      statusBadge = '<span style="color: var(--accent-green); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">SUCCESS</span>';
+    } else if (item.status === 'failed') {
+      statusBadge = '<span style="color: var(--accent-red); background: rgba(239,68,68,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">FAILED</span>';
+    } else {
+      statusBadge = '<span style="color: var(--accent-gold); background: rgba(251,191,36,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">PROCESSING</span>';
+    }
+    
+    const modelName = getModelDisplayName(item.modelId);
+    const date = new Date(item.timestamp);
+    const dateStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    
+    row.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <strong style="color: var(--text-primary); font-size: 13px;">${item.recipeTitle}</strong>
+          <span style="color: var(--text-muted); font-size: 11px;">${modelName} • ${item.duration}s • ${item.aspectRatio} • ${dateStr}</span>
+        </div>
+        <div>${statusBadge}</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 4px;">
+        <div style="display: flex; gap: 8px;">
+          ${item.status === 'success' ? `
+            <button class="btn-play-history" data-url="${item.videoUrl}" style="background: none; border: none; color: var(--accent-gold); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600;">
+              <i class="fa-solid fa-play"></i> Putar Video
+            </button>
+          ` : ''}
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-regen-history" data-id="${item.id}" style="background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px;">
+            <i class="fa-solid fa-rotate-right"></i> Regenerate
+          </button>
+          <button class="btn-delete-history" data-id="${item.id}" style="background: none; border: none; color: var(--accent-red); cursor: pointer; padding: 2px;" title="Hapus dari riwayat">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    if (item.status === 'success') {
+      row.querySelector('.btn-play-history').addEventListener('click', (e) => {
+        showFreebeatVideoPlayer(item.recipeTitle, e.currentTarget.getAttribute('data-url'));
+      });
+    }
+    
+    row.querySelector('.btn-regen-history').addEventListener('click', () => {
+      handleRegenerateFromHistory(item);
+    });
+    
+    row.querySelector('.btn-delete-history').addEventListener('click', () => {
+      handleDeleteHistoryItem(item.id);
+    });
+    
+    els.freebeatHistoryList.appendChild(row);
+  });
+}
+
+function showFreebeatVideoPlayer(recipeTitle, videoUrl) {
+  els.freebeatVideoStatusContainer.style.display = 'block';
+  els.freebeatVideoLoader.style.display = 'none';
+  els.freebeatVideoErrorWrapper.style.display = 'none';
+  els.freebeatVideoPlayerWrapper.style.display = 'flex';
+  
+  els.freebeatGeneratedVideo.src = videoUrl;
+  
+  els.freebeatVideoStatusContainer.scrollIntoView({ behavior: 'smooth' });
+  showToast(`Memutar video: ${recipeTitle}`, 'info');
+}
+
+function handleRegenerateFromHistory(item) {
+  els.freebeatModelSelect.value = item.modelId;
+  els.freebeatDuration.value = item.duration;
+  els.freebeatAspectRatio.value = item.aspectRatio;
+  els.freebeatResolution.value = item.resolution;
+  els.freebeatGenerateAudio.checked = item.generateAudio;
+  els.masterSeedancePrompt.value = item.prompt;
+  
+  showToast(`Mengekspor setelan dari riwayat resep "${item.recipeTitle}"...`, 'info');
+  
+  // Trigger generation automatically
+  handleGenerateFreebeatVideo();
+}
+
+function handleDeleteHistoryItem(id) {
+  // Clear interval if polling is still active
+  if (state.freebeatVideoIntervals[id]) {
+    clearInterval(state.freebeatVideoIntervals[id]);
+    delete state.freebeatVideoIntervals[id];
+  }
+  
+  state.freebeatHistory = state.freebeatHistory.filter(item => item.id !== id);
+  saveFreebeatHistory();
+  renderFreebeatHistory();
+  showToast('Item riwayat dihapus.', 'info');
+}
+
+function clearFreebeatHistory() {
+  if (confirm('Apakah Anda yakin ingin menghapus seluruh riwayat generate video?')) {
+    // Clear all polling intervals
+    Object.keys(state.freebeatVideoIntervals).forEach(id => {
+      clearInterval(state.freebeatVideoIntervals[id]);
+    });
+    state.freebeatVideoIntervals = {};
+    
+    state.freebeatHistory = [];
+    saveFreebeatHistory();
+    renderFreebeatHistory();
+    showToast('Seluruh riwayat berhasil dibersihkan.', 'info');
+  }
+}
+
 async function handleGenerateFreebeatVideo() {
   const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
   if (!activeKey) {
@@ -880,11 +1075,6 @@ async function handleGenerateFreebeatVideo() {
     return;
   }
   
-  // Clear any existing polling
-  if (state.freebeatVideoPollingInterval) {
-    clearInterval(state.freebeatVideoPollingInterval);
-  }
-  
   // Show progress loader
   els.freebeatVideoStatusContainer.style.display = 'block';
   els.freebeatVideoLoader.style.display = 'flex';
@@ -895,6 +1085,7 @@ async function handleGenerateFreebeatVideo() {
   
   els.freebeatVideoLoaderText.textContent = 'Memulai antrean render Video Studio...';
   
+  // NOTE: Send watermark: false and watermark: 0 to completely disable watermark!
   const requestBody = {
     items: [
       {
@@ -905,7 +1096,9 @@ async function handleGenerateFreebeatVideo() {
         resolution: resolution,
         aspectRatio: aspect_ratio,
         audio: audioValue,
-        generateAudio: audioValue
+        generateAudio: audioValue,
+        watermark: false,
+        watermarkValue: 0
       }
     ]
   };
@@ -941,6 +1134,25 @@ async function handleGenerateFreebeatVideo() {
     els.freebeatVideoLoaderText.textContent = 'Render video diterima! Menunggu antrean rendering...';
     showToast('Render video berhasil dibuat! Memulai polling status...', 'success');
     
+    // Create new history item
+    const historyItem = {
+      id: batchId,
+      recipeTitle: state.storyboardTitle,
+      prompt: prompt,
+      modelId: modelId,
+      duration: duration,
+      resolution: resolution,
+      aspectRatio: aspect_ratio,
+      generateAudio: generate_audio,
+      timestamp: Date.now(),
+      status: 'processing',
+      videoUrl: '',
+      errorMsg: ''
+    };
+    state.freebeatHistory.push(historyItem);
+    saveFreebeatHistory();
+    renderFreebeatHistory();
+    
     // Start Polling
     startFreebeatVideoPolling(batchId, activeKey, estimatedCost);
     
@@ -951,10 +1163,13 @@ async function handleGenerateFreebeatVideo() {
 }
 
 function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
-  state.freebeatVideoTaskId = batchId;
+  // Clear any existing polling for this specific batch ID
+  if (state.freebeatVideoIntervals[batchId]) {
+    clearInterval(state.freebeatVideoIntervals[batchId]);
+  }
   
   // Poll every 8 seconds
-  state.freebeatVideoPollingInterval = setInterval(async () => {
+  state.freebeatVideoIntervals[batchId] = setInterval(async () => {
     try {
       const response = await fetch('/proxy', {
         method: 'POST',
@@ -977,8 +1192,19 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
       
       const status = String(item.status).toLowerCase();
       
+      // Update history item status
+      const historyItem = state.freebeatHistory.find(h => h.id === batchId);
+      if (historyItem) {
+        historyItem.status = (status === 'success' || status === 'completed' || status === 'finished') 
+          ? 'success' 
+          : ((status === 'failed' || status === 'rejected' || status === 'error') ? 'failed' : 'processing');
+        saveFreebeatHistory();
+        renderFreebeatHistory();
+      }
+      
       if (status === 'success' || status === 'completed' || status === 'finished') {
-        clearInterval(state.freebeatVideoPollingInterval);
+        clearInterval(state.freebeatVideoIntervals[batchId]);
+        delete state.freebeatVideoIntervals[batchId];
         
         // Deduct actual credits or estimated cost
         const usedCredits = item.usedCredits !== undefined ? item.usedCredits : estimatedCost;
@@ -987,10 +1213,27 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         saveFreebeatKeys();
         renderFreebeatKeySelect();
         
+        // Update history item URL
+        if (historyItem) {
+          historyItem.videoUrl = item.videoUrl;
+          saveFreebeatHistory();
+          renderFreebeatHistory();
+        }
+        
+        // Only update active main video player if this is the active generated video
         showFreebeatVideoSuccess(item.videoUrl);
       } else if (status === 'failed' || status === 'rejected' || status === 'error') {
-        clearInterval(state.freebeatVideoPollingInterval);
-        showFreebeatVideoError(item.errorMessage || 'Proses render video di server Freebeat gagal.');
+        clearInterval(state.freebeatVideoIntervals[batchId]);
+        delete state.freebeatVideoIntervals[batchId];
+        
+        const errorMsg = item.errorMessage || 'Proses render video di server Freebeat gagal.';
+        if (historyItem) {
+          historyItem.errorMsg = errorMsg;
+          saveFreebeatHistory();
+          renderFreebeatHistory();
+        }
+        
+        showFreebeatVideoError(errorMsg);
       } else {
         // Update loading status
         els.freebeatVideoLoaderText.textContent = `Rendering video... Status: ${status.toUpperCase()}`;
@@ -1036,6 +1279,89 @@ function downloadFreebeatVideo() {
   link.target = '_blank';
   link.click();
   showToast('Mengunduh video...', 'success');
+}
+
+async function autoDetectFreebeatBalance() {
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (!activeKey) {
+    showToast('Silakan pilih atau tambahkan API Key Freebeat terlebih dahulu!', 'error');
+    return;
+  }
+  
+  const refreshBtn = els.btnRefreshFreebeatBalance;
+  const icon = refreshBtn.querySelector('i');
+  if (icon) {
+    icon.classList.add('fa-spin');
+  }
+  refreshBtn.disabled = true;
+  
+  showToast('Menghubungi server Freebeat untuk menyinkronkan balance...', 'info');
+  try {
+    const response = await fetch('/proxy', {
+      method: 'GET',
+      headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/credits',
+        'Authorization': activeKey.key
+      }
+    });
+    
+    if (response.ok) {
+      const text = await response.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          if (data.code === 200 || data.code === 0) {
+            const credits = data.data.credits + (data.data.extra_credits || 0);
+            activeKey.balance = credits;
+            saveFreebeatKeys();
+            renderFreebeatKeySelect();
+            showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
+            return;
+          }
+        } catch (e) {
+          // Silent catch to fall back
+        }
+      }
+    }
+    
+    // Probing user/info as well
+    const infoResponse = await fetch('/proxy', {
+      method: 'GET',
+      headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/user/info',
+        'Authorization': activeKey.key
+      }
+    });
+    
+    if (infoResponse.ok) {
+      const text = await infoResponse.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          if (data.code === 0 && data.data && data.data.credits !== undefined) {
+            const credits = data.data.credits + (data.data.extra_credits || 0);
+            activeKey.balance = credits;
+            saveFreebeatKeys();
+            renderFreebeatKeySelect();
+            showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
+            return;
+          }
+        } catch (e) {
+          // Silent catch
+        }
+      }
+    }
+    
+    showToast('Cek Balance: API Developer Freebeat tidak menyediakan info sisa balance. Menggunakan pelacakan manual.', 'warning');
+  } catch (err) {
+    console.error('Error auto detecting balance:', err);
+    showToast('Gagal terhubung ke API Freebeat untuk cek balance.', 'error');
+  } finally {
+    if (icon) {
+      icon.classList.remove('fa-spin');
+    }
+    refreshBtn.disabled = false;
+  }
 }
 
 // Start application

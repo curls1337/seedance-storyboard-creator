@@ -64,7 +64,8 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.user = {
       id: user.id,
       username: user.username,
-      role: user.role
+      role: user.role,
+      total_credits_used: user.total_credits_used || 0
     };
 
     res.json({ success: true, user: req.session.user });
@@ -83,8 +84,16 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
-app.get('/api/auth/session', (req, res) => {
+app.get('/api/auth/session', async (req, res) => {
   if (req.session.user) {
+    try {
+      const userRes = await pool.query('SELECT total_credits_used FROM users WHERE id = $1', [req.session.user.id]);
+      if (userRes.rows.length > 0) {
+        req.session.user.total_credits_used = userRes.rows[0].total_credits_used || 0;
+      }
+    } catch (err) {
+      console.error('Session DB fetch error:', err);
+    }
     res.json({ loggedIn: true, user: req.session.user });
   } else {
     res.json({ loggedIn: false });
@@ -271,7 +280,9 @@ app.get('/api/history', requireLogin, async (req, res) => {
       timestamp: Number(row.timestamp),
       status: row.status,
       videoUrl: row.video_url || '',
-      errorMsg: row.error_msg || ''
+      errorMsg: row.error_msg || '',
+      credits: row.credits || 0,
+      type: row.type || 'video'
     }));
     res.json(history);
   } catch (err) {
@@ -284,11 +295,15 @@ app.post('/api/history', requireLogin, async (req, res) => {
   const item = req.body;
   const user = req.session.user;
   try {
+    // Check existing status
+    const existing = await pool.query('SELECT status FROM history WHERE id = $1', [item.id]);
+    const wasSuccess = existing.rows.length > 0 && existing.rows[0].status === 'success';
+
     await pool.query(
-      `INSERT INTO history (id, recipe_title, prompt, model_id, duration, resolution, aspect_ratio, generate_audio, timestamp, status, video_url, error_msg, user_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+      `INSERT INTO history (id, recipe_title, prompt, model_id, duration, resolution, aspect_ratio, generate_audio, timestamp, status, video_url, error_msg, user_id, credits, type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
        ON CONFLICT (id) DO UPDATE 
-       SET status = $10, video_url = $11, error_msg = $12, user_id = $13`,
+       SET status = $10, video_url = $11, error_msg = $12, user_id = $13, credits = $14, type = $15`,
       [
         item.id,
         item.recipeTitle,
@@ -302,9 +317,24 @@ app.post('/api/history', requireLogin, async (req, res) => {
         item.status,
         item.videoUrl || null,
         item.errorMsg || null,
-        user.id
+        user.id,
+        item.credits || 0,
+        item.type || 'video'
       ]
     );
+
+    // If it transitions to success, accumulate the user's credits
+    if (item.status === 'success' && !wasSuccess) {
+      const creditsToAdd = item.credits || 0;
+      if (creditsToAdd > 0) {
+        await pool.query(
+          'UPDATE users SET total_credits_used = total_credits_used + $1 WHERE id = $2',
+          [creditsToAdd, user.id]
+        );
+        req.session.user.total_credits_used = (req.session.user.total_credits_used || 0) + creditsToAdd;
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('Save history error:', err);

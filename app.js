@@ -310,8 +310,32 @@ const els = {
 
   // Tab History Elements
   historyGridContainer: document.getElementById('history-grid-container'),
-  btnClearHistoryTab: document.getElementById('btn-clear-history-tab')
+  btnClearHistoryTab: document.getElementById('btn-clear-history-tab'),
+
+  // Session total credits
+  sessionTotalCredits: document.getElementById('session-total-credits')
 };
+
+// Update user total credits in sidebar
+function updateUserCreditsUI() {
+  if (state.sessionUser && els.sessionTotalCredits) {
+    els.sessionTotalCredits.textContent = `${state.sessionUser.total_credits_used || 0} Credits`;
+  }
+}
+
+// Refresh session user data (total credits used) from server
+async function refreshSessionUserCredits() {
+  try {
+    const response = await fetch('/api/auth/session');
+    const data = await response.json();
+    if (data.loggedIn) {
+      state.sessionUser = data.user;
+      updateUserCreditsUI();
+    }
+  } catch (e) {
+    console.error('Failed to refresh user credits:', e);
+  }
+}
 
 // Initialization
 function init() {
@@ -351,6 +375,7 @@ function handleLoginSuccess(user) {
   
   els.sessionUsername.textContent = user.username;
   els.sessionRole.textContent = user.role;
+  updateUserCreditsUI();
   
   applyRoleAccess(user.role);
   
@@ -1535,6 +1560,37 @@ async function generateCombinedStoryboardImage() {
     els.combinedLoaderText.textContent = 'Render gambar diterima! Menunggu antrean rendering...';
     showToast('Render gambar berhasil dibuat! Memulai polling...', 'success');
     
+    // Create new history item in DB
+    const historyItem = {
+      id: batchId,
+      recipeTitle: state.storyboardTitle || 'Gambar Storyboard',
+      prompt: prompt,
+      modelId: String(state.imageModel),
+      duration: 0,
+      resolution: state.imageSize || '1024x1024',
+      aspectRatio: '1:1',
+      generateAudio: false,
+      timestamp: Date.now(),
+      status: 'processing',
+      videoUrl: '',
+      errorMsg: '',
+      credits: 0,
+      type: 'image'
+    };
+    
+    try {
+      const saveResponse = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(historyItem)
+      });
+      if (saveResponse.ok) {
+        await loadFreebeatHistory();
+      }
+    } catch (e) {
+      console.error('Failed to save image processing history:', e);
+    }
+
     startFreebeatImagePolling(batchId, activeKey);
     
   } catch (error) {
@@ -1642,12 +1698,97 @@ function startFreebeatImagePolling(batchId, activeKey) {
           els.btnDownloadCombined.disabled = false;
           els.btnExportStoryboard.disabled = false;
           showToast('Gambar infografis storyboard berhasil dibuat!', 'success');
+
+          // Extract credits and save success state to DB
+          const totalCredits = successes.reduce((acc, item) => acc + (item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : 0)), 0);
+          
+          try {
+            const existingHistory = state.freebeatHistory.find(h => h.id === batchId) || {};
+            const historyItem = {
+              id: batchId,
+              recipeTitle: existingHistory.recipeTitle || state.storyboardTitle || 'Gambar Storyboard',
+              prompt: existingHistory.prompt || '',
+              modelId: existingHistory.modelId || String(state.imageModel),
+              duration: 0,
+              resolution: existingHistory.resolution || state.imageSize || '1024x1024',
+              aspectRatio: '1:1',
+              generateAudio: false,
+              timestamp: existingHistory.timestamp || Date.now(),
+              status: 'success',
+              videoUrl: imgUrl1,
+              errorMsg: '',
+              credits: totalCredits,
+              type: 'image'
+            };
+            
+            await fetch('/api/history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(historyItem)
+            });
+
+            // Deduct credits and update key balance
+            const newUsed = (activeKey.used_credits || 0) + totalCredits;
+            let newBalance = activeKey.balance;
+            if (activeKey.balance !== null && activeKey.balance !== undefined) {
+              newBalance = Math.max(0, activeKey.balance - totalCredits);
+            }
+            
+            await fetch('/api/freebeat-keys', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: activeKey.id,
+                label: activeKey.label,
+                key: activeKey.key,
+                usedCredits: newUsed,
+                balance: newBalance
+              })
+            });
+            
+            await loadFreebeatKeys();
+            await loadFreebeatHistory();
+            await refreshSessionUserCredits();
+          } catch (e) {
+            console.error('Failed to update image success history:', e);
+          }
         } else {
           const failedItem = items.find(item => {
             const status = String(item.status).toLowerCase();
             return (status === 'failed' || status === 'rejected' || status === 'error');
           });
           const errorMsg = failedItem?.errorMessage || 'Proses render gambar di server Freebeat gagal.';
+          
+          // Save failed state to DB
+          try {
+            const existingHistory = state.freebeatHistory.find(h => h.id === batchId) || {};
+            const historyItem = {
+              id: batchId,
+              recipeTitle: existingHistory.recipeTitle || state.storyboardTitle || 'Gambar Storyboard',
+              prompt: existingHistory.prompt || '',
+              modelId: existingHistory.modelId || String(state.imageModel),
+              duration: 0,
+              resolution: existingHistory.resolution || state.imageSize || '1024x1024',
+              aspectRatio: '1:1',
+              generateAudio: false,
+              timestamp: existingHistory.timestamp || Date.now(),
+              status: 'failed',
+              videoUrl: '',
+              errorMsg: errorMsg,
+              credits: 0,
+              type: 'image'
+            };
+            
+            await fetch('/api/history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(historyItem)
+            });
+            await loadFreebeatHistory();
+          } catch (e) {
+            console.error('Failed to update failed image history:', e);
+          }
+
           showToast(`Gagal generate gambar: ${errorMsg}`, 'error');
           els.combinedImagePlaceholder.style.display = 'flex';
           els.storyboardImagesContainer.style.display = 'none';
@@ -2151,10 +2292,38 @@ function renderFreebeatHistory() {
       statusBadge = '<span style="color: var(--accent-gold); background: rgba(251,191,36,0.1); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i>PROCESSING</span>';
     }
     
-    const modelName = getModelDisplayName(item.modelId);
+    // Model display name detection for both video and image models
+    const displayNamesImage = {
+      '80': 'Nano Banana 2',
+      '64': 'Nano Banana Pro',
+      '99': 'Wan V2.7 Image',
+      '100': 'Wan V2.7 Pro Image',
+      '108': 'GPT-Image 2'
+    };
+    const modelName = item.type === 'image' ? (displayNamesImage[item.modelId] || `Image Model ${item.modelId}`) : getModelDisplayName(item.modelId);
+    
     const date = new Date(item.timestamp);
     const dateStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' + date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
+    // Construct metadata tags
+    let tagsHtml = '';
+    tagsHtml += `<span class="meta-tag" style="text-transform: uppercase;"><i class="fa-solid ${item.type === 'image' ? 'fa-image' : 'fa-film'}" style="margin-right: 4px;"></i>${item.type || 'video'}</span>`;
+    tagsHtml += `<span class="meta-tag">${modelName}</span>`;
+    
+    if (item.type !== 'image') {
+      tagsHtml += `<span class="meta-tag">${item.duration} Detik</span>`;
+      tagsHtml += `<span class="meta-tag">${item.resolution}</span>`;
+      tagsHtml += `<span class="meta-tag">${item.aspectRatio}</span>`;
+      if (item.generateAudio) {
+        tagsHtml += `<span class="meta-tag"><i class="fa-solid fa-volume-high"></i> Audio</span>`;
+      }
+    } else {
+      tagsHtml += `<span class="meta-tag">${item.resolution}</span>`;
+    }
+    
+    // Add Credits tag
+    tagsHtml += `<span class="meta-tag" style="border-color: var(--accent-gold); color: var(--accent-gold); font-weight: 600;"><i class="fa-solid fa-coins" style="margin-right: 4px;"></i>${item.credits || 0} Credits</span>`;
+
     card.innerHTML = `
       <div class="history-card-header">
         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -2164,23 +2333,25 @@ function renderFreebeatHistory() {
         <div>${statusBadge}</div>
       </div>
       <div class="history-card-meta">
-        <span class="meta-tag">${modelName}</span>
-        <span class="meta-tag">${item.duration} Detik</span>
-        <span class="meta-tag">${item.resolution}</span>
-        <span class="meta-tag">${item.aspectRatio}</span>
-        ${item.generateAudio ? '<span class="meta-tag"><i class="fa-solid fa-volume-high"></i> Audio</span>' : ''}
+        ${tagsHtml}
       </div>
       <div class="history-card-prompt" title="${item.prompt}">${item.prompt}</div>
       
-      ${item.status === 'success' ? `
-        <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
-          <video src="${item.videoUrl}" style="width: 100%; height: 100%; object-fit: contain;" controls preload="none"></video>
-        </div>
-      ` : ''}
+      ${item.status === 'success' ? (
+        item.type === 'image' ? `
+          <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
+            <img src="${item.videoUrl}" style="width: 100%; height: 100%; object-fit: contain;">
+          </div>
+        ` : `
+          <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
+            <video src="${item.videoUrl}" style="width: 100%; height: 100%; object-fit: contain;" controls preload="none"></video>
+          </div>
+        `
+      ) : ''}
       
       ${item.status === 'failed' ? `
         <div style="padding: 10px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); color: var(--accent-red); font-size: 11px;">
-          <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> ${item.errorMsg || 'Gagal generate video.'}
+          <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> ${item.errorMsg || 'Gagal generate ' + (item.type === 'image' ? 'gambar' : 'video') + '.'}
         </div>
       ` : ''}
 
@@ -2190,11 +2361,17 @@ function renderFreebeatHistory() {
         </button>
         
         <div style="display: flex; gap: 8px;">
-          ${item.status === 'success' ? `
-            <button class="btn btn-primary btn-play" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
-              <i class="fa-solid fa-play"></i> Putar di Player Utama
-            </button>
-          ` : ''}
+          ${item.status === 'success' ? (
+            item.type === 'image' ? `
+              <button class="btn btn-primary btn-use-img" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
+                <i class="fa-solid fa-clapperboard"></i> Pakai Gambar ini
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-play" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
+                <i class="fa-solid fa-play"></i> Putar di Player Utama
+              </button>
+            `
+          ) : ''}
         </div>
       </div>
     `;
@@ -2205,10 +2382,24 @@ function renderFreebeatHistory() {
     });
     
     if (item.status === 'success') {
-      card.querySelector('.btn-play').addEventListener('click', () => {
-        showFreebeatVideoPlayer(item.recipeTitle, item.videoUrl);
-        switchTab('tab-generator');
-      });
+      if (item.type === 'image') {
+        card.querySelector('.btn-use-img').addEventListener('click', () => {
+          state.combinedImage = item.videoUrl;
+          els.combinedStoryboardImage.src = item.videoUrl;
+          els.combinedStoryboardImage.style.display = 'block';
+          els.combinedImagePlaceholder.style.display = 'none';
+          els.storyboardImagesContainer.style.display = 'block';
+          els.btnDownloadCombined.disabled = false;
+          els.btnExportStoryboard.disabled = false;
+          showToast('Gambar dimuat ke Editor Storyboard!', 'success');
+          switchTab('tab-generator');
+        });
+      } else {
+        card.querySelector('.btn-play').addEventListener('click', () => {
+          showFreebeatVideoPlayer(item.recipeTitle, item.videoUrl);
+          switchTab('tab-generator');
+        });
+      }
     }
     
     els.historyGridContainer.appendChild(card);
@@ -2228,6 +2419,18 @@ function showFreebeatVideoPlayer(recipeTitle, videoUrl) {
 }
 
 function handleRegenerateFromHistory(item) {
+  if (item.type === 'image') {
+    els.imageModelSelect.value = item.modelId || '108';
+    state.imageModel = item.modelId || '108';
+    els.imageSizeSelect.value = item.resolution || '1024x1024';
+    state.imageSize = item.resolution || '1024x1024';
+    els.masterGridPrompt.value = item.prompt;
+    
+    showToast(`Mengekspor setelan dari riwayat gambar resep "${item.recipeTitle}"...`, 'info');
+    switchTab('tab-generator');
+    return;
+  }
+  
   const modelId = item.modelId;
   const config = modelConfigs[modelId];
   if (config && config.supportedModes) {
@@ -2530,10 +2733,12 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         
         // Update history item in Database
         const historyItem = state.freebeatHistory.find(h => h.id === batchId);
+        const usedCredits = isSuccess ? (item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : (estimatedCost || 0))) : 0;
         if (historyItem) {
           historyItem.status = newStatus;
           historyItem.videoUrl = videoUrl;
           historyItem.errorMsg = errorMsg;
+          historyItem.credits = usedCredits;
           
           await fetch('/api/history', {
             method: 'POST',
@@ -2543,9 +2748,6 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         }
         
         if (isSuccess) {
-          // Deduct credits and update key balance
-          const usedCredits = item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : (estimatedCost || 0));
-          
           // Track usage and save to DB
           const newUsed = (activeKey.used_credits || 0) + usedCredits;
           let newBalance = activeKey.balance;
@@ -2567,6 +2769,7 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
           
           await loadFreebeatKeys();
           await loadFreebeatHistory();
+          await refreshSessionUserCredits();
           
           if (batchId === state.latestVideoBatchId) {
             showFreebeatVideoSuccess(videoUrl);

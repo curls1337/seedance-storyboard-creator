@@ -7,9 +7,11 @@ const state = {
   masterGridPrompt: '',
   masterSeedancePrompt: '',
   combinedImage: '',
+  combinedImage2: '',
   textModel: 'gpt-4o-mini',
   imageModel: '108',
   imageSize: '1024x1024',
+  imageCount: 1,
   sceneCount: 11,
   productImage: '',
   characterImage: '',
@@ -176,6 +178,7 @@ const els = {
   textModelSelect: document.getElementById('text-model-select'),
   imageModelSelect: document.getElementById('image-model-select'),
   imageSizeSelect: document.getElementById('image-size-select'),
+  imageCountSelect: document.getElementById('image-count-select'),
   sceneCount: document.getElementById('scene-count'),
   sceneCountVal: document.getElementById('scene-count-val'),
   btnGenerateStoryboard: document.getElementById('btn-generate-storyboard'),
@@ -190,7 +193,12 @@ const els = {
   
   // Combined Image Elements
   btnClearStoryboard: document.getElementById('btn-clear-storyboard'),
+  storyboardImagesContainer: document.getElementById('storyboard-images-container'),
+  storyboardImagesGrid: document.getElementById('storyboard-images-grid'),
+  lblStoryboardImg1: document.getElementById('lbl-storyboard-img1'),
+  storyboardImg2Wrapper: document.getElementById('storyboard-img2-wrapper'),
   combinedStoryboardImage: document.getElementById('combined-storyboard-image'),
+  combinedStoryboardImage2: document.getElementById('combined-storyboard-image-2'),
   combinedImagePlaceholder: document.getElementById('combined-image-placeholder'),
   combinedImageLoader: document.getElementById('combined-image-loader'),
   combinedLoaderText: document.getElementById('combined-loader-text'),
@@ -491,6 +499,9 @@ function setupEventListeners() {
   });
   els.imageSizeSelect.addEventListener('change', () => {
     state.imageSize = els.imageSizeSelect.value;
+  });
+  els.imageCountSelect.addEventListener('change', () => {
+    state.imageCount = parseInt(els.imageCountSelect.value, 10) || 1;
   });
 
   // Product image events
@@ -1203,16 +1214,19 @@ function loadTemplate(templateId) {
   els.templateSelect.value = templateId;
 }
 
-// Clear Storyboard Creator State & Views
+// Clear Storyboard Creator State
 function clearStoryboard() {
   state.storyboardTitle = '';
   state.masterGridPrompt = '';
   state.masterSeedancePrompt = '';
   state.combinedImage = '';
+  state.combinedImage2 = '';
+  state.imageCount = 1;
   
   // Clear inputs
   els.recipeConcept.value = '';
   els.templateSelect.value = '';
+  els.imageCountSelect.value = '1';
   
   // Clear product reference image if any
   if (state.productImage) {
@@ -1258,7 +1272,12 @@ function clearStoryboard() {
   
   // Reset combined image view
   els.combinedStoryboardImage.src = '';
-  els.combinedStoryboardImage.style.display = 'none';
+  els.combinedStoryboardImage2.src = '';
+  els.lblStoryboardImg1.style.display = 'none';
+  els.storyboardImg2Wrapper.style.display = 'none';
+  els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
+  els.storyboardImagesContainer.style.display = 'none';
+  
   els.combinedImagePlaceholder.style.display = 'flex';
   els.btnDownloadCombined.disabled = true;
   els.btnExportStoryboard.disabled = true;
@@ -1452,7 +1471,7 @@ async function generateCombinedStoryboardImage() {
         size: state.imageSize || "1024x1024",
         resolution: state.imageSize || "1024x1024",
         quality: "medium",
-        count: 1
+        count: parseInt(state.imageCount, 10) || 1
       }
     ]
   };
@@ -1530,14 +1549,15 @@ function startFreebeatImagePolling(batchId, activeKey) {
       if (data.code !== 0) return; // Silent retry
       
       const batchData = data.data;
-      const item = batchData.items[0];
-      if (!item) return;
+      const items = batchData.items || [];
+      if (items.length === 0) return;
       
-      const status = String(item.status).toLowerCase();
-      const isSuccess = (status === 'success' || status === 'completed' || status === 'finished');
-      const isFailed = (status === 'failed' || status === 'rejected' || status === 'error');
+      const allDone = items.every(item => {
+        const status = String(item.status).toLowerCase();
+        return (status === 'success' || status === 'completed' || status === 'finished' || status === 'failed' || status === 'rejected' || status === 'error');
+      });
       
-      if (isSuccess || isFailed) {
+      if (allDone) {
         clearInterval(state.freebeatImageIntervals[batchId]);
         delete state.freebeatImageIntervals[batchId];
         
@@ -1545,31 +1565,59 @@ function startFreebeatImagePolling(batchId, activeKey) {
         els.btnGenerateCombinedImage.disabled = false;
         els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)';
         
-        if (isSuccess) {
-          const imageUrl = item.imageUrl;
-          if (!imageUrl) {
-            showToast('Gagal: Image URL kosong dari response Freebeat.', 'error');
+        const successes = items.filter(item => {
+          const status = String(item.status).toLowerCase();
+          return (status === 'success' || status === 'completed' || status === 'finished');
+        });
+        
+        if (successes.length === items.length) {
+          const imgUrl1 = successes[0].imageUrl;
+          if (!imgUrl1) {
+            showToast('Gagal: Image URL 1 kosong dari response Freebeat.', 'error');
             els.combinedImagePlaceholder.style.display = 'flex';
-            els.combinedStoryboardImage.style.display = 'none';
+            els.storyboardImagesContainer.style.display = 'none';
             return;
           }
           
-          state.combinedImage = imageUrl;
-          els.combinedStoryboardImage.src = imageUrl;
-          els.combinedStoryboardImage.style.display = 'block';
+          state.combinedImage = imgUrl1;
+          els.combinedStoryboardImage.src = imgUrl1;
+          
+          if (items.length > 1) {
+            const imgUrl2 = successes[1].imageUrl;
+            if (imgUrl2) {
+              state.combinedImage2 = imgUrl2;
+              els.combinedStoryboardImage2.src = imgUrl2;
+              els.lblStoryboardImg1.style.display = 'block';
+              els.storyboardImg2Wrapper.style.display = 'block';
+              els.storyboardImagesGrid.style.gridTemplateColumns = '1fr 1fr';
+            }
+          } else {
+            state.combinedImage2 = '';
+            els.combinedStoryboardImage2.src = '';
+            els.lblStoryboardImg1.style.display = 'none';
+            els.storyboardImg2Wrapper.style.display = 'none';
+            els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
+          }
+          
+          els.storyboardImagesContainer.style.display = 'block';
           els.combinedImagePlaceholder.style.display = 'none';
           
           els.btnDownloadCombined.disabled = false;
           els.btnExportStoryboard.disabled = false;
           showToast('Gambar infografis storyboard berhasil dibuat!', 'success');
         } else {
-          const errorMsg = item.errorMessage || 'Proses render gambar di server Freebeat gagal.';
+          const failedItem = items.find(item => {
+            const status = String(item.status).toLowerCase();
+            return (status === 'failed' || status === 'rejected' || status === 'error');
+          });
+          const errorMsg = failedItem?.errorMessage || 'Proses render gambar di server Freebeat gagal.';
           showToast(`Gagal generate gambar: ${errorMsg}`, 'error');
           els.combinedImagePlaceholder.style.display = 'flex';
-          els.combinedStoryboardImage.style.display = 'none';
+          els.storyboardImagesContainer.style.display = 'none';
         }
       } else {
-        els.combinedLoaderText.textContent = `Rendering gambar... Status: ${status.toUpperCase()}`;
+        const statuses = items.map(item => String(item.status).toUpperCase()).join(', ');
+        els.combinedLoaderText.textContent = `Rendering gambar... Status: ${statuses}`;
       }
     } catch (err) {
       console.error('Image polling error:', err);
@@ -1597,9 +1645,15 @@ function handleCombinedFileUpload(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     state.combinedImage = e.target.result;
+    state.combinedImage2 = '';
     
     els.combinedStoryboardImage.src = state.combinedImage;
-    els.combinedStoryboardImage.style.display = 'block';
+    els.combinedStoryboardImage2.src = '';
+    els.lblStoryboardImg1.style.display = 'none';
+    els.storyboardImg2Wrapper.style.display = 'none';
+    els.storyboardImagesGrid.style.gridTemplateColumns = '1fr';
+    
+    els.storyboardImagesContainer.style.display = 'block';
     els.combinedImagePlaceholder.style.display = 'none';
     
     els.btnDownloadCombined.disabled = false;
@@ -1769,17 +1823,23 @@ function handleVEndImageUpload(event) {
 }
 
 function handleUseStoryboardEnd() {
-  if (!state.combinedImage) {
+  const targetImage = state.combinedImage2 || state.combinedImage;
+  if (!targetImage) {
     showToast('Gambar storyboard kosong! Silakan generate storyboard terlebih dahulu.', 'error');
     return;
   }
   state.vEndFile = null;
-  state.vEndImage = state.combinedImage;
+  state.vEndImage = targetImage;
   
-  els.vEndPreviewImg.src = state.combinedImage;
+  els.vEndPreviewImg.src = targetImage;
   els.vEndPreviewContainer.style.display = 'flex';
-  els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Gambar Akhir';
-  showToast('Menggunakan gambar storyboard sebagai Gambar Akhir!', 'success');
+  els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Akhir';
+  
+  if (state.combinedImage2) {
+    showToast('Menggunakan Gambar 2 Storyboard sebagai Gambar Akhir!', 'success');
+  } else {
+    showToast('Menggunakan Gambar 1 Storyboard sebagai Gambar Akhir!', 'success');
+  }
 }
 
 // V2V Video Handler

@@ -1799,12 +1799,11 @@ async function handleGenerateFreebeatVideo() {
   
   els.freebeatVideoLoaderText.textContent = 'Memulai antrean render Video Studio...';
   
-  const hasImage = !!state.combinedImage;
   const requestBody = {
     items: [
       {
         modelId: String(modelId),
-        generationType: hasImage ? 2 : 1,
+        generationType: 1,
         prompt: prompt,
         duration: duration,
         resolution: resolution,
@@ -1812,8 +1811,7 @@ async function handleGenerateFreebeatVideo() {
         audio: audioValue,
         generateAudio: audioValue,
         watermark: false,
-        watermarkValue: 0,
-        ...(hasImage ? { image: state.combinedImage } : {})
+        watermarkValue: 0
       }
     ]
   };

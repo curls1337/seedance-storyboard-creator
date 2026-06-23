@@ -403,13 +403,21 @@ app.all('/proxy', requireLogin, async (req, res) => {
   const parsedUrl = new URL(targetUrl);
   const clientModule = parsedUrl.protocol === 'https:' ? https : http;
   
-  const headers = { ...req.headers };
-  delete headers['host'];
-  delete headers['x-target-url'];
-  delete headers['connection'];
+  // Construct clean headers to avoid remote server blocks (due to CORS/Origin, Cookie conflicts, or Accept-Encoding issues)
+  const headers = {};
   if (authHeader) {
     headers['authorization'] = authHeader;
   }
+  if (req.headers['content-type']) {
+    headers['content-type'] = req.headers['content-type'];
+  }
+  if (req.headers['content-length']) {
+    headers['content-length'] = req.headers['content-length'];
+  }
+  if (req.headers['accept']) {
+    headers['accept'] = req.headers['accept'];
+  }
+  headers['user-agent'] = req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
   const options = {
     hostname: parsedUrl.hostname,

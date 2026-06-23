@@ -2,23 +2,19 @@
 
 // Application State
 const state = {
+  sessionUser: null, // { id, username, role }
   storyboardTitle: 'Indomie Nyemek Viral',
   masterGridPrompt: '',
   masterSeedancePrompt: '',
   combinedImage: '',
-  baseUrl: 'http://143.198.218.129:8045/v1',
-  apiKey: 'dsuaufsakjfsa',
   textModel: 'gpt-4o-mini',
   imageModel: 'gemini-3.1-flash-image',
   sceneCount: 11,
-  isConnected: false,
   productImage: '',
   
   // Freebeat Keys State
   freebeatKeys: [], // [{ id: 'uuid', label: 'My Key', key: 'sk-...', balance: 1000 }]
   activeFreebeatKeyId: '',
-  freebeatVideoTaskId: null,
-  freebeatVideoPollingInterval: null,
   
   // History and Multiple Polling State
   freebeatHistory: [], // [{ id: 'batchId', recipeTitle: '...', prompt: '...', modelId: '...', duration: 5, resolution: '720p', aspectRatio: '9:16', generateAudio: false, timestamp: 1234567, status: 'success'/'failed'/'processing', videoUrl: '...', errorMsg: '...' }]
@@ -105,7 +101,6 @@ const modelConfigs = {
   }
 };
 
-
 // Built-in Templates Data
 const templates = {
   'indomie-nyemek': {
@@ -132,11 +127,36 @@ const templates = {
 
 // UI Elements
 const els = {
+  // Login overlays
+  loginScreen: document.getElementById('login-screen'),
+  loginForm: document.getElementById('login-form'),
+  loginUsername: document.getElementById('login-username'),
+  loginPassword: document.getElementById('login-password'),
+
+  // Main container
+  appMainLayout: document.getElementById('app-main-layout'),
+
+  // Session profile info
+  sessionUsername: document.getElementById('session-username'),
+  sessionRole: document.getElementById('session-role'),
+  btnShowChangePwd: document.getElementById('btn-show-change-pwd'),
+  btnLogout: document.getElementById('btn-logout'),
+
+  // Change Password Modal
+  changePasswordModal: document.getElementById('change-password-modal'),
+  changePasswordForm: document.getElementById('change-password-form'),
+  changePwdUserid: document.getElementById('change-pwd-userid'),
+  changePwdLabelUsername: document.getElementById('change-pwd-label-username'),
+  changePwdVal: document.getElementById('change-pwd-val'),
+  btnClosePwdModal: document.getElementById('btn-close-pwd-modal'),
+
+  // Proxy Settings
   apiBaseUrl: document.getElementById('api-base-url'),
   apiKey: document.getElementById('api-key'),
   btnTestConnection: document.getElementById('btn-test-connection'),
   apiStatusDot: document.getElementById('api-status-dot'),
   apiStatusText: document.getElementById('api-status-text'),
+  settingsForm: document.getElementById('settings-form'),
   
   templateSelect: document.getElementById('template-select'),
   
@@ -189,15 +209,7 @@ const els = {
   freebeatKeySelect: document.getElementById('freebeat-key-select'),
   freebeatActiveBalanceWrapper: document.getElementById('freebeat-active-balance-wrapper'),
   freebeatActiveBalanceDisplay: document.getElementById('freebeat-active-balance-display'),
-  btnManageFreebeatKeys: document.getElementById('btn-manage-freebeat-keys'),
-  
-  // Freebeat Keys Modal Elements
-  freebeatKeysModal: document.getElementById('freebeat-keys-modal'),
-  btnCloseFreebeatModal: document.getElementById('btn-close-freebeat-modal'),
-  freebeatKeysListContainer: document.getElementById('freebeat-keys-list-container'),
-  newFreebeatKeyLabel: document.getElementById('new-freebeat-key-label'),
-  newFreebeatKeyVal: document.getElementById('new-freebeat-key-val'),
-  btnAddFreebeatKey: document.getElementById('btn-add-freebeat-key'),
+  btnRefreshFreebeatBalance: document.getElementById('btn-refresh-freebeat-balance'),
 
   // Freebeat Video Generator Elements
   freebeatModelSelect: document.getElementById('freebeat-model-select'),
@@ -218,34 +230,156 @@ const els = {
   freebeatVideoErrorWrapper: document.getElementById('freebeat-video-error-wrapper'),
   freebeatVideoErrorMsg: document.getElementById('freebeat-video-error-msg'),
   
-  // Freebeat Video History Elements
-  freebeatHistoryList: document.getElementById('freebeat-history-list'),
-  btnClearFreebeatHistory: document.getElementById('btn-clear-freebeat-history'),
-  btnRefreshFreebeatBalance: document.getElementById('btn-refresh-freebeat-balance')
+  // Manage Users Tab Elements
+  addUserForm: document.getElementById('add-user-form'),
+  newUserUsername: document.getElementById('new-user-username'),
+  newUserPassword: document.getElementById('new-user-password'),
+  newUserRole: document.getElementById('new-user-role'),
+  usersListBody: document.getElementById('users-list-body'),
+
+  // Manage Freebeat Keys Tab Elements
+  addFreebeatKeyForm: document.getElementById('add-freebeat-key-form'),
+  newKeyLabel: document.getElementById('new-key-label'),
+  newKeyVal: document.getElementById('new-key-val'),
+  keysListBody: document.getElementById('keys-list-body'),
+
+  // Tab History Elements
+  historyGridContainer: document.getElementById('history-grid-container'),
+  btnClearHistoryTab: document.getElementById('btn-clear-history-tab')
 };
 
 // Initialization
 function init() {
   setupEventListeners();
-  syncStateFromInputs();
-  checkApiConnectionQuietly();
-  
-  // Load Freebeat Keys
-  loadFreebeatKeys();
-  // Load Freebeat History
-  loadFreebeatHistory();
-  
-  // Initialize duration options and cost display based on selected model
-  updateDurationOptionsAndCost();
+  setupTabNavigation();
+  checkSession();
 }
 
-// Sync Form Inputs to State
-function syncStateFromInputs() {
-  state.baseUrl = els.apiBaseUrl.value.trim();
-  state.apiKey = els.apiKey.value.trim();
-  state.textModel = els.textModelSelect.value;
-  state.imageModel = els.imageModelSelect.value;
-  state.sceneCount = parseInt(els.sceneCount.value, 10);
+// Check Active Session
+async function checkSession() {
+  try {
+    const response = await fetch('/api/auth/session');
+    const data = await response.json();
+    if (data.loggedIn) {
+      handleLoginSuccess(data.user);
+    } else {
+      showLoginScreen();
+    }
+  } catch (error) {
+    console.error('Session check error:', error);
+    showLoginScreen();
+  }
+}
+
+// Show Login Page
+function showLoginScreen() {
+  els.loginScreen.style.display = 'flex';
+  els.appMainLayout.style.display = 'none';
+}
+
+// Show Dashboard Main Layout
+function handleLoginSuccess(user) {
+  state.sessionUser = user;
+  els.loginScreen.style.display = 'none';
+  els.appMainLayout.style.display = 'flex';
+  
+  els.sessionUsername.textContent = user.username;
+  els.sessionRole.textContent = user.role;
+  
+  applyRoleAccess(user.role);
+  
+  // Load data
+  loadFreebeatKeys();
+  loadFreebeatHistory();
+  
+  if (user.role === 'admin') {
+    loadSettings();
+    loadUsersList();
+  }
+  
+  // Switch to default Tab: Storyboard Creator
+  switchTab('tab-generator');
+  
+  // Load default Indomie Nyemek Template
+  loadTemplate('indomie-nyemek');
+}
+
+// Apply Role-based access constraints on UI
+function applyRoleAccess(role) {
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = (role === 'admin') ? '' : 'none';
+  });
+}
+
+// Sidebar Tab switching
+function setupTabNavigation() {
+  document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tabId = item.getAttribute('data-tab');
+      
+      // Safety check: standard users cannot open admin tabs
+      if (state.sessionUser && state.sessionUser.role !== 'admin' && item.classList.contains('admin-only')) {
+        return;
+      }
+      
+      switchTab(tabId);
+    });
+  });
+}
+
+function switchTab(tabId) {
+  // Toggle active class on Nav Items
+  document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+    if (item.getAttribute('data-tab') === tabId) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  // Toggle active class on Tab sheets
+  document.querySelectorAll('.app-tab').forEach(tab => {
+    if (tab.id === tabId) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+
+  // Show/Hide sidebar generator controls depending on Storyboard Creator tab
+  const generatorControls = document.getElementById('generator-sidebar-controls');
+  if (tabId === 'tab-generator') {
+    generatorControls.style.display = 'block';
+    document.getElementById('top-nav-actions').style.display = '';
+  } else {
+    generatorControls.style.display = 'none';
+    document.getElementById('top-nav-actions').style.display = 'none';
+  }
+
+  // Update Top Navigation Title & Icon
+  const topNavTitle = document.getElementById('top-nav-title');
+  const topNavIcon = document.getElementById('top-nav-icon');
+  
+  if (tabId === 'tab-generator') {
+    topNavTitle.textContent = 'Panel Storyboard & Prompt';
+    topNavIcon.className = 'fa-solid fa-clapperboard';
+  } else if (tabId === 'tab-history') {
+    topNavTitle.textContent = 'Riwayat Video Studio';
+    topNavIcon.className = 'fa-solid fa-history';
+    loadFreebeatHistory(); // Reload history when tab is viewed
+  } else if (tabId === 'tab-users') {
+    topNavTitle.textContent = 'Manajemen Pengguna (Users)';
+    topNavIcon.className = 'fa-solid fa-users-gear';
+    loadUsersList();
+  } else if (tabId === 'tab-freebeat-keys') {
+    topNavTitle.textContent = 'Kelola Freebeat API Keys';
+    topNavIcon.className = 'fa-solid fa-key';
+    loadFreebeatKeys();
+  } else if (tabId === 'tab-settings') {
+    topNavTitle.textContent = 'Koneksi API Proxy';
+    topNavIcon.className = 'fa-solid fa-gears';
+    loadSettings();
+  }
 }
 
 // Toast Notifications Helper
@@ -265,19 +399,33 @@ function showToast(message, type = 'info') {
 
 // Event Listeners Setup
 function setupEventListeners() {
-  // Inputs sync
-  els.apiBaseUrl.addEventListener('change', () => { state.baseUrl = els.apiBaseUrl.value.trim(); checkApiConnectionQuietly(); });
-  els.apiKey.addEventListener('change', () => { state.apiKey = els.apiKey.value.trim(); checkApiConnectionQuietly(); });
-  els.textModelSelect.addEventListener('change', () => state.textModel = els.textModelSelect.value);
-  els.imageModelSelect.addEventListener('change', () => state.imageModel = els.imageModelSelect.value);
+  // Login Form
+  els.loginForm.addEventListener('submit', handleLogin);
   
+  // Logout
+  els.btnLogout.addEventListener('click', handleLogout);
+
+  // Own Change Password triggering
+  els.btnShowChangePwd.addEventListener('click', () => {
+    if (state.sessionUser) {
+      openChangePasswordModal(state.sessionUser.id, state.sessionUser.username);
+    }
+  });
+
+  // Change Password Form
+  els.changePasswordForm.addEventListener('submit', handleChangePassword);
+  els.btnClosePwdModal.addEventListener('click', closeChangePasswordModal);
+
+  // Settings / Connection
+  els.settingsForm.addEventListener('submit', handleSaveSettings);
+  els.btnTestConnection.addEventListener('click', testApiConnection);
+
+  // Generator triggers
   els.sceneCount.addEventListener('input', () => {
     els.sceneCountVal.textContent = els.sceneCount.value;
     state.sceneCount = parseInt(els.sceneCount.value, 10);
   });
 
-  // Action Buttons
-  els.btnTestConnection.addEventListener('click', testApiConnection);
   els.btnGenerateStoryboard.addEventListener('click', generateStoryboardWithAI);
   els.btnOneClickFlow.addEventListener('click', runOneClickFlow);
   els.btnQuickLoadNyemek.addEventListener('click', () => loadTemplate('indomie-nyemek'));
@@ -302,20 +450,190 @@ function setupEventListeners() {
     if (val) loadTemplate(val);
   });
 
-  // Freebeat keys manager events
-  els.btnManageFreebeatKeys.addEventListener('click', openFreebeatKeysModal);
-  els.btnCloseFreebeatModal.addEventListener('click', closeFreebeatKeysModal);
-  els.btnAddFreebeatKey.addEventListener('click', handleAddFreebeatKey);
+  // Freebeat options triggering
   els.freebeatKeySelect.addEventListener('change', handleSelectFreebeatKey);
   els.btnGenerateFreebeatVideo.addEventListener('click', handleGenerateFreebeatVideo);
   els.btnDownloadFreebeatVideo.addEventListener('click', downloadFreebeatVideo);
-  els.btnClearFreebeatHistory.addEventListener('click', clearFreebeatHistory);
   els.btnRefreshFreebeatBalance.addEventListener('click', autoDetectFreebeatBalance);
   
   // Dynamic duration and cost calculation listeners
   els.freebeatModelSelect.addEventListener('change', updateDurationOptionsAndCost);
   els.freebeatDuration.addEventListener('change', updateEstimatedCostUI);
   els.freebeatResolution.addEventListener('change', updateEstimatedCostUI);
+
+  // User Management triggers
+  els.addUserForm.addEventListener('submit', handleAddUser);
+
+  // Freebeat Keys Management triggers
+  els.addFreebeatKeyForm.addEventListener('submit', handleAddFreebeatKey);
+
+  // Clear History
+  els.btnClearHistoryTab.addEventListener('click', clearFreebeatHistory);
+}
+
+// ----------------------------------------------------
+// 1. Authentication Handlers
+// ----------------------------------------------------
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = els.loginUsername.value.trim();
+  const password = els.loginPassword.value.trim();
+  
+  if (!username || !password) {
+    showToast('Username dan password wajib diisi!', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.success) {
+      els.loginUsername.value = '';
+      els.loginPassword.value = '';
+      showToast('Login Berhasil!', 'success');
+      handleLoginSuccess(data.user);
+    } else {
+      showToast(data.error || 'Login Gagal!', 'error');
+    }
+  } catch (error) {
+    console.error('Login request error:', error);
+    showToast('Server error saat mencoba login.', 'error');
+  }
+}
+
+async function handleLogout() {
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST' });
+    if (response.ok) {
+      // Clear polling intervals
+      Object.keys(state.freebeatVideoIntervals).forEach(id => {
+        clearInterval(state.freebeatVideoIntervals[id]);
+      });
+      state.freebeatVideoIntervals = {};
+      state.sessionUser = null;
+      
+      showToast('Berhasil logout!', 'success');
+      showLoginScreen();
+    } else {
+      showToast('Gagal logout.', 'error');
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+    showLoginScreen();
+  }
+}
+
+function openChangePasswordModal(userId, username) {
+  els.changePwdUserid.value = userId;
+  els.changePwdLabelUsername.textContent = `Username: ${username}`;
+  els.changePwdVal.value = '';
+  els.changePasswordModal.style.display = 'flex';
+  els.changePasswordModal.offsetHeight;
+  els.changePasswordModal.classList.add('active');
+}
+
+function closeChangePasswordModal() {
+  els.changePasswordModal.classList.remove('active');
+  setTimeout(() => {
+    if (!els.changePasswordModal.classList.contains('active')) {
+      els.changePasswordModal.style.display = 'none';
+    }
+  }, 250);
+}
+
+async function handleChangePassword(e) {
+  e.preventDefault();
+  const userId = els.changePwdUserid.value;
+  const newPassword = els.changePwdVal.value.trim();
+  
+  if (!newPassword || newPassword.length < 4) {
+    showToast('Password minimal 4 karakter!', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, newPassword })
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast(data.message || 'Password berhasil diubah.', 'success');
+      closeChangePasswordModal();
+    } else {
+      showToast(data.error || 'Gagal mengubah password.', 'error');
+    }
+  } catch (err) {
+    console.error('Change password error:', err);
+    showToast('Gagal terhubung ke server untuk mengubah password.', 'error');
+  }
+}
+
+// ----------------------------------------------------
+// 2. Settings (Proxy Settings) Handlers
+// ----------------------------------------------------
+
+async function loadSettings() {
+  try {
+    const response = await fetch('/api/settings');
+    if (response.ok) {
+      const settings = await response.json();
+      if (settings.api_base_url) els.apiBaseUrl.value = settings.api_base_url;
+      if (settings.api_key) els.apiKey.value = settings.api_key;
+      if (settings.text_model) els.textModelSelect.value = settings.text_model;
+      if (settings.image_model) els.imageModelSelect.value = settings.image_model;
+      
+      syncStateFromInputs();
+      checkApiConnectionQuietly();
+    }
+  } catch (error) {
+    console.error('Load settings error:', error);
+  }
+}
+
+function syncStateFromInputs() {
+  state.baseUrl = els.apiBaseUrl.value.trim();
+  state.apiKey = els.apiKey.value.trim();
+  state.textModel = els.textModelSelect.value;
+  state.imageModel = els.imageModelSelect.value;
+}
+
+async function handleSaveSettings(e) {
+  e.preventDefault();
+  syncStateFromInputs();
+  
+  const settings = {
+    api_base_url: state.baseUrl,
+    api_key: state.apiKey,
+    text_model: state.textModel,
+    image_model: state.imageModel
+  };
+  
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast(data.message || 'Pengaturan berhasil disimpan!', 'success');
+      checkApiConnectionQuietly();
+    } else {
+      showToast(data.error || 'Gagal menyimpan pengaturan.', 'error');
+    }
+  } catch (error) {
+    console.error('Save settings error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
+  }
 }
 
 // Check connection quietly on load
@@ -335,7 +653,10 @@ async function testApiConnection() {
 
 // Connection Verification Logic
 async function verifyConnection(showToasts = true) {
-  if (!state.baseUrl || !state.apiKey) {
+  const url = els.apiBaseUrl.value.trim();
+  const key = els.apiKey.value.trim();
+  
+  if (!url || !key) {
     if (showToasts) showToast('Password dan Base URL harus diisi!', 'error');
     return false;
   }
@@ -344,13 +665,13 @@ async function verifyConnection(showToasts = true) {
     const response = await fetch('/proxy', {
       method: 'GET',
       headers: {
-        'x-target-url': `${state.baseUrl}/models`,
-        'Authorization': `Bearer ${state.apiKey}`
+        'x-target-url': `${url}/models`,
+        'Authorization': `Bearer ${key}`
       }
     });
     
     if (response.ok) {
-      if (showToasts) showToast('Koneksi berhasil! Password valid.', 'success');
+      if (showToasts) showToast('Koneksi berhasil! API Key Proxy valid.', 'success');
       return true;
     } else {
       if (showToasts) showToast(`Koneksi gagal. HTTP Status: ${response.status}`, 'error');
@@ -365,18 +686,386 @@ async function verifyConnection(showToasts = true) {
 
 // Connection Status UI updater
 function updateConnectionStatusUI(connected) {
-  state.isConnected = connected;
   if (connected) {
     els.apiStatusDot.className = 'status-dot connected';
     els.apiStatusText.textContent = 'Connected';
-    els.btnGenerateStoryboard.disabled = false;
   } else {
     els.apiStatusDot.className = 'status-dot';
     els.apiStatusText.textContent = 'Disconnected';
   }
 }
 
-// Load built-in templates
+// ----------------------------------------------------
+// 3. User Management Handlers (Admin Only)
+// ----------------------------------------------------
+
+async function loadUsersList() {
+  try {
+    const response = await fetch('/api/users');
+    if (response.ok) {
+      const users = await response.json();
+      renderUsersTable(users);
+    }
+  } catch (error) {
+    console.error('Error loading users:', error);
+  }
+}
+
+function renderUsersTable(users) {
+  els.usersListBody.innerHTML = '';
+  users.forEach(user => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${user.id}</td>
+      <td><strong>${user.username}</strong></td>
+      <td><span style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: ${user.role === 'admin' ? 'var(--accent-gold)' : 'var(--text-secondary)'}">${user.role}</span></td>
+      <td>
+        <button class="btn btn-secondary btn-action-pwd" style="display: inline-flex; width: auto; margin-top: 0; padding: 4px 10px; font-size: 11px;" type="button">
+          <i class="fa-solid fa-key"></i> Ubah Pwd
+        </button>
+        <button class="btn btn-secondary btn-action-del" style="display: ${user.username === 'admin' || user.id === state.sessionUser.id ? 'none' : 'inline-flex'}; width: auto; margin-top: 0; padding: 4px 10px; font-size: 11px; border-color: var(--accent-red); color: var(--accent-red);" type="button">
+          <i class="fa-solid fa-trash"></i> Hapus
+        </button>
+      </td>
+    `;
+    
+    tr.querySelector('.btn-action-pwd').addEventListener('click', () => {
+      openChangePasswordModal(user.id, user.username);
+    });
+    
+    const delBtn = tr.querySelector('.btn-action-del');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => {
+        handleDeleteUser(user.id, user.username);
+      });
+    }
+    
+    els.usersListBody.appendChild(tr);
+  });
+}
+
+async function handleAddUser(e) {
+  e.preventDefault();
+  const username = els.newUserUsername.value.trim();
+  const password = els.newUserPassword.value.trim();
+  const role = els.newUserRole.value;
+  
+  if (!username || !password || !role) {
+    showToast('Semua field wajib diisi!', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role })
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast('User berhasil ditambahkan!', 'success');
+      els.newUserUsername.value = '';
+      els.newUserPassword.value = '';
+      loadUsersList();
+    } else {
+      showToast(data.error || 'Gagal menambahkan user.', 'error');
+    }
+  } catch (error) {
+    console.error('Add user error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
+  }
+}
+
+async function handleDeleteUser(userId, username) {
+  if (!confirm(`Apakah Anda yakin ingin menghapus user "${username}"?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast('User berhasil dihapus.', 'success');
+      loadUsersList();
+    } else {
+      showToast(data.error || 'Gagal menghapus user.', 'error');
+    }
+  } catch (error) {
+    console.error('Delete user error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
+  }
+}
+
+// ----------------------------------------------------
+// 4. Freebeat API Keys Handlers
+// ----------------------------------------------------
+
+async function loadFreebeatKeys() {
+  try {
+    const response = await fetch('/api/freebeat-keys');
+    if (response.ok) {
+      state.freebeatKeys = await response.json();
+      
+      // Determine active key
+      const savedActiveId = localStorage.getItem('active_freebeat_key_id');
+      const exists = state.freebeatKeys.some(k => k.id === savedActiveId);
+      if (exists) {
+        state.activeFreebeatKeyId = savedActiveId;
+      } else if (state.freebeatKeys.length > 0) {
+        state.activeFreebeatKeyId = state.freebeatKeys[0].id;
+      } else {
+        state.activeFreebeatKeyId = '';
+      }
+      
+      renderFreebeatKeySelect();
+      if (state.sessionUser && state.sessionUser.role === 'admin') {
+        renderFreebeatKeysTable();
+      }
+    }
+  } catch (err) {
+    console.error('Error loading Freebeat keys:', err);
+  }
+}
+
+function renderFreebeatKeySelect() {
+  els.freebeatKeySelect.innerHTML = '';
+  
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.disabled = true;
+  defaultOpt.selected = !state.activeFreebeatKeyId;
+  defaultOpt.textContent = '-- Pilih API Key --';
+  els.freebeatKeySelect.appendChild(defaultOpt);
+  
+  state.freebeatKeys.forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key.id;
+    opt.selected = (key.id === state.activeFreebeatKeyId);
+    
+    const used = key.used_credits || 0;
+    opt.textContent = `${key.label} (${key.key}) • Terpakai: ${used} Cr`;
+    els.freebeatKeySelect.appendChild(opt);
+  });
+  
+  // Show active balance UI
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (activeKey) {
+    const used = activeKey.used_credits || 0;
+    const hasBalance = (activeKey.balance !== undefined && activeKey.balance !== null);
+    const balanceText = hasBalance ? `<span style="display: inline-flex; align-items: center; gap: 4px; margin-left: 12px;"><i class="fa-solid fa-wallet" style="color: var(--text-muted);"></i> Sisa: <strong>${activeKey.balance} Credits</strong></span>` : '';
+    els.freebeatActiveBalanceDisplay.innerHTML = `
+      <span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> Terpakai: <strong>${used} Credits</strong></span>${balanceText}
+    `;
+    els.freebeatActiveBalanceWrapper.style.display = 'block';
+  } else {
+    els.freebeatActiveBalanceWrapper.style.display = 'none';
+  }
+}
+
+function renderFreebeatKeysTable() {
+  els.keysListBody.innerHTML = '';
+  if (state.freebeatKeys.length === 0) {
+    els.keysListBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada API Key.</td></tr>';
+    return;
+  }
+  
+  state.freebeatKeys.forEach(key => {
+    const tr = document.createElement('tr');
+    
+    const used = key.used_credits || 0;
+    const sisa = (key.balance !== null && key.balance !== undefined) ? `${key.balance} Credits` : '-';
+    
+    tr.innerHTML = `
+      <td><strong>${key.label}</strong></td>
+      <td><span style="font-family: monospace; font-size: 11px;">${key.key} (${sisa})</span></td>
+      <td>${used} Credits</td>
+      <td>
+        <button class="btn btn-secondary btn-action-del-key" style="display: inline-flex; width: auto; margin-top: 0; padding: 4px 10px; font-size: 11px; border-color: var(--accent-red); color: var(--accent-red);" type="button">
+          <i class="fa-solid fa-trash"></i> Hapus
+        </button>
+      </td>
+    `;
+    
+    tr.querySelector('.btn-action-del-key').addEventListener('click', () => {
+      handleDeleteFreebeatKey(key.id, key.label);
+    });
+    
+    els.keysListBody.appendChild(tr);
+  });
+}
+
+async function handleAddFreebeatKey(e) {
+  e.preventDefault();
+  const label = els.newKeyLabel.value.trim();
+  const keyVal = els.newKeyVal.value.trim();
+  
+  if (!label || !keyVal) {
+    showToast('Semua field wajib diisi!', 'error');
+    return;
+  }
+  
+  const id = 'fb_' + Date.now().toString();
+  
+  try {
+    const response = await fetch('/api/freebeat-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, label, key: keyVal })
+    });
+    
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast('API Key Freebeat berhasil ditambahkan!', 'success');
+      els.newKeyLabel.value = '';
+      els.newKeyVal.value = '';
+      
+      // Auto save active key selection
+      if (state.freebeatKeys.length === 0) {
+        state.activeFreebeatKeyId = id;
+        localStorage.setItem('active_freebeat_key_id', id);
+      }
+      
+      await loadFreebeatKeys();
+      autoDetectFreebeatBalance();
+    } else {
+      showToast(data.error || 'Gagal menambahkan API Key.', 'error');
+    }
+  } catch (error) {
+    console.error('Add freebeat key error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
+  }
+}
+
+async function handleDeleteFreebeatKey(keyId, label) {
+  if (!confirm(`Apakah Anda yakin ingin menghapus API Key "${label}"?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/freebeat-keys/${keyId}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      showToast('API Key berhasil dihapus.', 'success');
+      if (state.activeFreebeatKeyId === keyId) {
+        state.activeFreebeatKeyId = '';
+        localStorage.removeItem('active_freebeat_key_id');
+      }
+      loadFreebeatKeys();
+    } else {
+      showToast(data.error || 'Gagal menghapus API Key.', 'error');
+    }
+  } catch (error) {
+    console.error('Delete key error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
+  }
+}
+
+function handleSelectFreebeatKey() {
+  state.activeFreebeatKeyId = els.freebeatKeySelect.value;
+  localStorage.setItem('active_freebeat_key_id', state.activeFreebeatKeyId);
+  renderFreebeatKeySelect();
+  showToast('API Key Aktif diganti.', 'info');
+  
+  autoDetectFreebeatBalance();
+}
+
+async function autoDetectFreebeatBalance() {
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (!activeKey) {
+    return;
+  }
+  
+  const refreshBtn = els.btnRefreshFreebeatBalance;
+  const icon = refreshBtn.querySelector('i');
+  if (icon) icon.classList.add('fa-spin');
+  refreshBtn.disabled = true;
+  
+  showToast('Menghubungi server Freebeat untuk menyinkronkan balance...', 'info');
+  try {
+    // Attempt credits API
+    const response = await fetch('/proxy', {
+      method: 'GET',
+      headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/credits',
+        'Authorization': activeKey.id // Sending Key ID which server resolves
+      }
+    });
+    
+    if (response.ok) {
+      const text = await response.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          if (data.code === 200 || data.code === 0) {
+            const credits = data.data.credits + (data.data.extra_credits || 0);
+            await saveKeyBalanceToDB(activeKey, credits);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+    
+    // Fallback: user info API
+    const infoResponse = await fetch('/proxy', {
+      method: 'GET',
+      headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/user/info',
+        'Authorization': activeKey.id
+      }
+    });
+    
+    if (infoResponse.ok) {
+      const text = await infoResponse.text();
+      if (text) {
+        try {
+          const data = JSON.parse(text);
+          if (data.code === 0 && data.data && data.data.credits !== undefined) {
+            const credits = data.data.credits + (data.data.extra_credits || 0);
+            await saveKeyBalanceToDB(activeKey, credits);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+    
+    showToast('Cek Balance: API Developer Freebeat tidak menyediakan info sisa balance. Menggunakan pelacakan manual.', 'warning');
+  } catch (err) {
+    console.error('Error auto detecting balance:', err);
+    showToast('Gagal terhubung ke API Freebeat untuk cek balance.', 'error');
+  } finally {
+    if (icon) icon.classList.remove('fa-spin');
+    refreshBtn.disabled = false;
+  }
+}
+
+async function saveKeyBalanceToDB(keyObj, credits) {
+  try {
+    // Send to DB to save
+    const response = await fetch('/api/freebeat-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: keyObj.id,
+        label: keyObj.label,
+        key: keyObj.key, // Masked if user is non-admin, but server route will check conf schema.
+        usedCredits: keyObj.used_credits || 0,
+        balance: credits
+      })
+    });
+    if (response.ok) {
+      await loadFreebeatKeys();
+      showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
+    }
+  } catch (error) {
+    console.error('Save balance error:', error);
+  }
+}
+
+// ----------------------------------------------------
+// 5. Generator logic (Load built-in templates)
+// ----------------------------------------------------
+
 function loadTemplate(templateId) {
   const tpl = templates[templateId];
   if (!tpl) return;
@@ -445,17 +1134,12 @@ async function copySeedancePrompt() {
   }
 }
 
-// API Generation: Create Storyboard Steps with LLM (gpt-4o-mini / gemini)
+// API Generation: Create Storyboard Steps with LLM (via secure endpoint)
 async function generateStoryboardWithAI() {
   const concept = els.recipeConcept.value.trim();
   if (!concept) {
     showToast('Harap masukkan konsep resep/video terlebih dahulu!', 'error');
     return;
-  }
-  
-  if (!state.isConnected) {
-    const ok = await verifyConnection(true);
-    if (!ok) return;
   }
   
   els.btnGenerateStoryboard.disabled = true;
@@ -494,11 +1178,9 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       });
     }
 
-    const response = await fetch('/proxy', {
+    const response = await fetch('/api/ai/chat/completions', {
       method: 'POST',
       headers: {
-        'x-target-url': `${state.baseUrl}/chat/completions`,
-        'Authorization': `Bearer ${state.apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -509,7 +1191,8 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     });
     
     if (!response.ok) {
-      throw new Error(`API returned error code: ${response.status}`);
+      const errData = await response.json();
+      throw new Error(errData.error || `Server error: ${response.status}`);
     }
     
     const data = await response.json();
@@ -563,11 +1246,6 @@ async function generateCombinedStoryboardImage() {
     return;
   }
   
-  if (!state.isConnected) {
-    const ok = await verifyConnection(true);
-    if (!ok) return;
-  }
-  
   els.btnGenerateCombinedImage.disabled = true;
   els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Grid...';
   
@@ -578,11 +1256,9 @@ async function generateCombinedStoryboardImage() {
   els.combinedLoaderText.textContent = 'Generating Storyboard Grid Image (1 Prompt)...';
   
   try {
-    const response = await fetch('/proxy', {
+    const response = await fetch('/api/ai/chat/completions', {
       method: 'POST',
       headers: {
-        'x-target-url': `${state.baseUrl}/chat/completions`,
-        'Authorization': `Bearer ${state.apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -594,7 +1270,8 @@ async function generateCombinedStoryboardImage() {
     });
     
     if (!response.ok) {
-      throw new Error(`Proxy error code: ${response.status}`);
+      const errData = await response.json();
+      throw new Error(errData.error || `Server error: ${response.status}`);
     }
     
     const data = await response.json();
@@ -644,10 +1321,6 @@ function downloadCombinedStoryboardImage() {
 }
 
 // Upload action for combined image manual file override
-function triggerCombinedUpload() {
-  els.combinedFileInput.click();
-}
-
 function handleCombinedFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -673,11 +1346,6 @@ async function runOneClickFlow() {
   if (!concept) {
     showToast('Harap masukkan konsep resep/video terlebih dahulu!', 'error');
     return;
-  }
-  
-  if (!state.isConnected) {
-    const ok = await verifyConnection(true);
-    if (!ok) return;
   }
   
   els.btnOneClickFlow.disabled = true;
@@ -739,214 +1407,9 @@ function clearProductImage() {
   showToast('Gambar referensi produk dihapus.', 'info');
 }
 
-// Freebeat Key Management functions
-function loadFreebeatKeys() {
-  try {
-    const savedKeys = localStorage.getItem('freebeat_keys');
-    const savedActiveId = localStorage.getItem('active_freebeat_key_id');
-    
-    if (savedKeys) {
-      state.freebeatKeys = JSON.parse(savedKeys);
-    } else {
-      state.freebeatKeys = [];
-    }
-    
-    if (savedActiveId) {
-      state.activeFreebeatKeyId = savedActiveId;
-    } else if (state.freebeatKeys.length > 0) {
-      state.activeFreebeatKeyId = state.freebeatKeys[0].id;
-    } else {
-      state.activeFreebeatKeyId = '';
-    }
-    
-    renderFreebeatKeySelect();
-    renderFreebeatKeysList();
-  } catch (err) {
-    console.error('Error loading Freebeat keys:', err);
-    state.freebeatKeys = [];
-    state.activeFreebeatKeyId = '';
-  }
-}
-
-function saveFreebeatKeys() {
-  localStorage.setItem('freebeat_keys', JSON.stringify(state.freebeatKeys));
-  localStorage.setItem('active_freebeat_key_id', state.activeFreebeatKeyId);
-}
-
-function renderFreebeatKeySelect() {
-  els.freebeatKeySelect.innerHTML = '';
-  
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.disabled = true;
-  defaultOpt.selected = !state.activeFreebeatKeyId;
-  defaultOpt.textContent = '-- Pilih API Key --';
-  els.freebeatKeySelect.appendChild(defaultOpt);
-  
-  state.freebeatKeys.forEach(key => {
-    const opt = document.createElement('option');
-    opt.value = key.id;
-    opt.selected = (key.id === state.activeFreebeatKeyId);
-    
-    // Mask key string for presentation
-    const masked = key.key.length > 12 
-      ? `${key.key.substring(0, 6)}...${key.key.substring(key.key.length - 4)}` 
-      : '***';
-    const used = key.usedCredits || 0;
-    opt.textContent = `${key.label} (${masked}) • Terpakai: ${used} Cr`;
-    els.freebeatKeySelect.appendChild(opt);
-  });
-  
-  // Show/Hide active balance display
-  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
-  if (activeKey) {
-    const used = activeKey.usedCredits || 0;
-    const hasBalance = (activeKey.balance !== undefined && activeKey.balance !== null);
-    const balanceText = hasBalance ? `<span style="display: inline-flex; align-items: center; gap: 4px; margin-left: 12px;"><i class="fa-solid fa-wallet" style="color: var(--text-muted);"></i> Sisa: <strong>${activeKey.balance} Credits</strong></span>` : '';
-    els.freebeatActiveBalanceDisplay.innerHTML = `
-      <span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> Terpakai: <strong>${used} Credits</strong></span>${balanceText}
-    `;
-    els.freebeatActiveBalanceWrapper.style.display = 'block';
-  } else {
-    els.freebeatActiveBalanceWrapper.style.display = 'none';
-  }
-}
-
-function renderFreebeatKeysList() {
-  els.freebeatKeysListContainer.innerHTML = '';
-  
-  if (state.freebeatKeys.length === 0) {
-    els.freebeatKeysListContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 16px 0;">Belum ada API Key. Tambahkan di bawah.</div>';
-    return;
-  }
-  
-  state.freebeatKeys.forEach(key => {
-    const item = document.createElement('div');
-    item.className = 'freebeat-key-item';
-    
-    const masked = key.key.length > 15 
-      ? `${key.key.substring(0, 8)}...${key.key.substring(key.key.length - 6)}` 
-      : '***';
-    
-    const isActive = (key.id === state.activeFreebeatKeyId);
-    const activeBadge = isActive ? '<span class="freebeat-key-active-badge">Aktif</span>' : '';
-    const used = key.usedCredits || 0;
-    const hasBalance = (key.balance !== undefined && key.balance !== null);
-    const balanceSpan = hasBalance ? `<span><i class="fa-solid fa-wallet" style="color: var(--text-muted); margin-right: 4px;"></i>Sisa: <strong>${key.balance}</strong> Credits</span>` : '';
-    
-    item.innerHTML = `
-      <div class="freebeat-key-info">
-        <div class="freebeat-key-label-row">
-          <span class="freebeat-key-label">${key.label}</span>
-          ${activeBadge}
-        </div>
-        <span class="freebeat-key-masked">${masked}</span>
-        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 12px;">
-          <span><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold); margin-right: 4px;"></i>Terpakai: <strong>${used}</strong> Credits</span>
-          ${balanceSpan}
-        </div>
-      </div>
-      <div class="freebeat-key-actions">
-        <button class="btn-delete-key" data-id="${key.id}" title="Hapus API Key"><i class="fa-solid fa-trash"></i></button>
-      </div>
-    `;
-    
-    item.querySelector('.btn-delete-key').addEventListener('click', (e) => {
-      const btn = e.currentTarget;
-      const keyId = btn.getAttribute('data-id');
-      handleDeleteFreebeatKey(keyId);
-    });
-    
-    els.freebeatKeysListContainer.appendChild(item);
-  });
-}
-
-function handleAddFreebeatKey() {
-  const label = els.newFreebeatKeyLabel.value.trim();
-  const keyVal = els.newFreebeatKeyVal.value.trim();
-  
-  if (!label || !keyVal) {
-    showToast('Semua field wajib diisi!', 'error');
-    return;
-  }
-  
-  const newId = 'fb_' + Date.now().toString();
-  const newKey = {
-    id: newId,
-    label: label,
-    key: keyVal,
-    balance: null,
-    usedCredits: 0
-  };
-  
-  state.freebeatKeys.push(newKey);
-  
-  // Set as active if it's the first key
-  if (state.freebeatKeys.length === 1) {
-    state.activeFreebeatKeyId = newId;
-  }
-  
-  // Reset fields
-  els.newFreebeatKeyLabel.value = '';
-  els.newFreebeatKeyVal.value = '';
-  
-  saveFreebeatKeys();
-  renderFreebeatKeySelect();
-  renderFreebeatKeysList();
-  showToast('API Key Freebeat berhasil ditambahkan!', 'success');
-  
-  autoDetectFreebeatBalance();
-}
-
-function handleDeleteFreebeatKey(keyId) {
-  state.freebeatKeys = state.freebeatKeys.filter(k => k.id !== keyId);
-  
-  if (state.activeFreebeatKeyId === keyId) {
-    state.activeFreebeatKeyId = state.freebeatKeys.length > 0 ? state.freebeatKeys[0].id : '';
-  }
-  
-  saveFreebeatKeys();
-  renderFreebeatKeySelect();
-  renderFreebeatKeysList();
-  showToast('API Key berhasil dihapus.', 'info');
-}
-
-function handleEditKeyBalance(keyId, newBalance) {
-  const key = state.freebeatKeys.find(k => k.id === keyId);
-  if (key) {
-    key.balance = newBalance;
-    saveFreebeatKeys();
-    renderFreebeatKeySelect();
-    showToast(`Balance "${key.label}" diperbarui menjadi ${newBalance} credits.`, 'success');
-  }
-}
-
-function handleSelectFreebeatKey() {
-  state.activeFreebeatKeyId = els.freebeatKeySelect.value;
-  saveFreebeatKeys();
-  renderFreebeatKeySelect();
-  renderFreebeatKeysList();
-  showToast('API Key Aktif diganti.', 'info');
-  
-  autoDetectFreebeatBalance();
-}
-
-function openFreebeatKeysModal() {
-  els.freebeatKeysModal.style.display = 'flex';
-  // Trigger reflow
-  els.freebeatKeysModal.offsetHeight;
-  els.freebeatKeysModal.classList.add('active');
-  renderFreebeatKeysList();
-}
-
-function closeFreebeatKeysModal() {
-  els.freebeatKeysModal.classList.remove('active');
-  setTimeout(() => {
-    if (!els.freebeatKeysModal.classList.contains('active')) {
-      els.freebeatKeysModal.style.display = 'none';
-    }
-  }, 250);
-}
+// ----------------------------------------------------
+// 6. Freebeat Video Studio Operations & History
+// ----------------------------------------------------
 
 // Dynamic Duration, Resolution and Credit Cost Auto-detection
 function updateDurationOptionsAndCost() {
@@ -1015,20 +1478,13 @@ function updateEstimatedCostUI() {
   const costDisplay = document.getElementById('freebeat-estimated-cost');
   
   if (cost === null || cost === undefined) {
-    if (costWrapper) {
-      costWrapper.style.display = 'none';
-    }
+    if (costWrapper) costWrapper.style.display = 'none';
   } else {
-    if (costWrapper) {
-      costWrapper.style.display = 'flex';
-    }
-    if (costDisplay) {
-      costDisplay.textContent = `${cost} Credits`;
-    }
+    if (costWrapper) costWrapper.style.display = 'flex';
+    if (costDisplay) costDisplay.textContent = `${cost} Credits`;
   }
 }
 
-// Freebeat Video Studio API helpers
 function getEstimatedCreditCost(modelId, duration, resolution) {
   const config = modelConfigs[modelId];
   if (config && typeof config.getCost === 'function') {
@@ -1038,27 +1494,18 @@ function getEstimatedCreditCost(modelId, duration, resolution) {
 }
 
 function getModelDisplayName(modelId) {
-  const modelMap = {
-    '94': 'Pixverse V6',
-    '103': 'Pixverse C1',
-    '104': 'Wan V2.7',
-    '102': 'SeedDance 2.0',
-    '101': 'SeedDance 2.0 Fast',
-    '112': 'Kling V3 4K',
-    '56': 'Sora 2 Pro',
-    '111': 'HappyHorse'
-  };
-  return modelMap[modelId] || `Model ${modelId}`;
+  const config = modelConfigs[modelId];
+  return config ? config.name : `Model ${modelId}`;
 }
 
-// Freebeat Video History functions
-function loadFreebeatHistory() {
+// Load history logs from Database
+async function loadFreebeatHistory() {
   try {
-    const saved = localStorage.getItem('freebeat_history');
-    if (saved) {
-      state.freebeatHistory = JSON.parse(saved);
+    const response = await fetch('/api/history');
+    if (response.ok) {
+      state.freebeatHistory = await response.json();
       
-      // Resume polling for any unfinished tasks
+      // Resume polling for any processing tasks in history
       const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
       if (activeKey) {
         state.freebeatHistory.forEach(item => {
@@ -1068,26 +1515,20 @@ function loadFreebeatHistory() {
           }
         });
       }
-    } else {
-      state.freebeatHistory = [];
+      
+      renderFreebeatHistory();
     }
-    renderFreebeatHistory();
   } catch (err) {
     console.error('Error loading history:', err);
-    state.freebeatHistory = [];
   }
 }
 
-function saveFreebeatHistory() {
-  localStorage.setItem('freebeat_history', JSON.stringify(state.freebeatHistory));
-}
-
 function renderFreebeatHistory() {
-  if (!els.freebeatHistoryList) return;
-  els.freebeatHistoryList.innerHTML = '';
+  if (!els.historyGridContainer) return;
+  els.historyGridContainer.innerHTML = '';
   
   if (state.freebeatHistory.length === 0) {
-    els.freebeatHistoryList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 12px 0;">Belum ada riwayat generate video.</div>';
+    els.historyGridContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 0;"><i class="fa-solid fa-folder-open" style="font-size: 48px; margin-bottom: 12px; display: block;"></i> Belum ada riwayat pengerjaan video.</div>';
     return;
   }
   
@@ -1095,73 +1536,80 @@ function renderFreebeatHistory() {
   const sorted = [...state.freebeatHistory].sort((a, b) => b.timestamp - a.timestamp);
   
   sorted.forEach(item => {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.flexDirection = 'column';
-    row.style.gap = '8px';
-    row.style.padding = '12px';
-    row.style.background = 'var(--bg-darker)';
-    row.style.border = '1px solid var(--border-color)';
-    row.style.borderRadius = 'var(--radius-sm)';
-    row.style.fontSize = '12px';
-    row.style.marginBottom = '8px';
+    const card = document.createElement('div');
+    card.className = 'history-card';
     
     // Status Badge
     let statusBadge = '';
     if (item.status === 'success') {
-      statusBadge = '<span style="color: var(--accent-green); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">SUCCESS</span>';
+      statusBadge = '<span style="color: var(--accent-green); background: rgba(16,185,129,0.1); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">SUCCESS</span>';
     } else if (item.status === 'failed') {
-      statusBadge = '<span style="color: var(--accent-red); background: rgba(239,68,68,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">FAILED</span>';
+      statusBadge = '<span style="color: var(--accent-red); background: rgba(239,68,68,0.1); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">FAILED</span>';
     } else {
-      statusBadge = '<span style="color: var(--accent-gold); background: rgba(251,191,36,0.1); padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 10px;">PROCESSING</span>';
+      statusBadge = '<span style="color: var(--accent-gold); background: rgba(251,191,36,0.1); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i>PROCESSING</span>';
     }
     
     const modelName = getModelDisplayName(item.modelId);
     const date = new Date(item.timestamp);
-    const dateStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    const dateStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' + date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     
-    row.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-        <div style="display: flex; flex-direction: column; gap: 2px;">
-          <strong style="color: var(--text-primary); font-size: 13px;">${item.recipeTitle}</strong>
-          <span style="color: var(--text-muted); font-size: 11px;">${modelName} • ${item.duration}s • ${item.aspectRatio} • ${dateStr}</span>
+    card.innerHTML = `
+      <div class="history-card-header">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="history-card-title">${item.recipeTitle}</span>
+          <span class="history-card-time">${dateStr}</span>
         </div>
         <div>${statusBadge}</div>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 4px;">
+      <div class="history-card-meta">
+        <span class="meta-tag">${modelName}</span>
+        <span class="meta-tag">${item.duration} Detik</span>
+        <span class="meta-tag">${item.resolution}</span>
+        <span class="meta-tag">${item.aspectRatio}</span>
+        ${item.generateAudio ? '<span class="meta-tag"><i class="fa-solid fa-volume-high"></i> Audio</span>' : ''}
+      </div>
+      <div class="history-card-prompt" title="${item.prompt}">${item.prompt}</div>
+      
+      ${item.status === 'success' ? `
+        <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; position: relative;">
+          <video src="${item.videoUrl}" style="width: 100%; height: 100%; object-fit: contain;" controls preload="none"></video>
+        </div>
+      ` : ''}
+      
+      ${item.status === 'failed' ? `
+        <div style="padding: 10px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); color: var(--accent-red); font-size: 11px;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> ${item.errorMsg || 'Gagal generate video.'}
+        </div>
+      ` : ''}
+
+      <div class="history-card-footer">
+        <button class="btn btn-secondary btn-regen" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
+          <i class="fa-solid fa-rotate-right"></i> Gunakan Prompt
+        </button>
+        
         <div style="display: flex; gap: 8px;">
           ${item.status === 'success' ? `
-            <button class="btn-play-history" data-url="${item.videoUrl}" style="background: none; border: none; color: var(--accent-gold); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600;">
-              <i class="fa-solid fa-play"></i> Putar Video
+            <button class="btn btn-primary btn-play" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto;" type="button">
+              <i class="fa-solid fa-play"></i> Putar di Player Utama
             </button>
           ` : ''}
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn-regen-history" data-id="${item.id}" style="background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px;">
-            <i class="fa-solid fa-rotate-right"></i> Regenerate
-          </button>
-          <button class="btn-delete-history" data-id="${item.id}" style="background: none; border: none; color: var(--accent-red); cursor: pointer; padding: 2px;" title="Hapus dari riwayat">
-            <i class="fa-solid fa-trash"></i>
-          </button>
         </div>
       </div>
     `;
     
-    if (item.status === 'success') {
-      row.querySelector('.btn-play-history').addEventListener('click', (e) => {
-        showFreebeatVideoPlayer(item.recipeTitle, e.currentTarget.getAttribute('data-url'));
-      });
-    }
-    
-    row.querySelector('.btn-regen-history').addEventListener('click', () => {
+    // Wire listeners
+    card.querySelector('.btn-regen').addEventListener('click', () => {
       handleRegenerateFromHistory(item);
     });
     
-    row.querySelector('.btn-delete-history').addEventListener('click', () => {
-      handleDeleteHistoryItem(item.id);
-    });
+    if (item.status === 'success') {
+      card.querySelector('.btn-play').addEventListener('click', () => {
+        showFreebeatVideoPlayer(item.recipeTitle, item.videoUrl);
+        switchTab('tab-generator');
+      });
+    }
     
-    els.freebeatHistoryList.appendChild(row);
+    els.historyGridContainer.appendChild(card);
   });
 }
 
@@ -1186,36 +1634,32 @@ function handleRegenerateFromHistory(item) {
   els.masterSeedancePrompt.value = item.prompt;
   
   showToast(`Mengekspor setelan dari riwayat resep "${item.recipeTitle}"...`, 'info');
-  
-  // Trigger generation automatically
-  handleGenerateFreebeatVideo();
+  switchTab('tab-generator');
 }
 
-function handleDeleteHistoryItem(id) {
-  // Clear interval if polling is still active
-  if (state.freebeatVideoIntervals[id]) {
-    clearInterval(state.freebeatVideoIntervals[id]);
-    delete state.freebeatVideoIntervals[id];
+async function clearFreebeatHistory() {
+  if (!confirm('Apakah Anda yakin ingin menghapus seluruh riwayat generate video? Tindakan ini tidak dapat dibatalkan.')) {
+    return;
   }
   
-  state.freebeatHistory = state.freebeatHistory.filter(item => item.id !== id);
-  saveFreebeatHistory();
-  renderFreebeatHistory();
-  showToast('Item riwayat dihapus.', 'info');
-}
-
-function clearFreebeatHistory() {
-  if (confirm('Apakah Anda yakin ingin menghapus seluruh riwayat generate video?')) {
-    // Clear all polling intervals
-    Object.keys(state.freebeatVideoIntervals).forEach(id => {
-      clearInterval(state.freebeatVideoIntervals[id]);
-    });
-    state.freebeatVideoIntervals = {};
-    
-    state.freebeatHistory = [];
-    saveFreebeatHistory();
-    renderFreebeatHistory();
-    showToast('Seluruh riwayat berhasil dibersihkan.', 'info');
+  try {
+    const response = await fetch('/api/history', { method: 'DELETE' });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      // Clear all local polling intervals
+      Object.keys(state.freebeatVideoIntervals).forEach(id => {
+        clearInterval(state.freebeatVideoIntervals[id]);
+      });
+      state.freebeatVideoIntervals = {};
+      
+      showToast('Seluruh riwayat berhasil dihapus.', 'success');
+      loadFreebeatHistory();
+    } else {
+      showToast(data.error || 'Gagal menghapus riwayat.', 'error');
+    }
+  } catch (error) {
+    console.error('Clear history error:', error);
+    showToast('Gagal terhubung ke server.', 'error');
   }
 }
 
@@ -1255,7 +1699,6 @@ async function handleGenerateFreebeatVideo() {
   
   els.freebeatVideoLoaderText.textContent = 'Memulai antrean render Video Studio...';
   
-  // NOTE: Send watermark: false and watermark: 0 to completely disable watermark!
   const requestBody = {
     items: [
       {
@@ -1278,7 +1721,7 @@ async function handleGenerateFreebeatVideo() {
       method: 'POST',
       headers: {
         'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/createVideoBatch',
-        'Authorization': activeKey.key,
+        'Authorization': activeKey.id, // Pass key ID, resolved transparently by the server!
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(requestBody)
@@ -1304,7 +1747,7 @@ async function handleGenerateFreebeatVideo() {
     els.freebeatVideoLoaderText.textContent = 'Render video diterima! Menunggu antrean rendering...';
     showToast('Render video berhasil dibuat! Memulai polling status...', 'success');
     
-    // Create new history item
+    // Create new history item in DB
     const historyItem = {
       id: batchId,
       recipeTitle: state.storyboardTitle,
@@ -1319,9 +1762,16 @@ async function handleGenerateFreebeatVideo() {
       videoUrl: '',
       errorMsg: ''
     };
-    state.freebeatHistory.push(historyItem);
-    saveFreebeatHistory();
-    renderFreebeatHistory();
+    
+    const saveResponse = await fetch('/api/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(historyItem)
+    });
+    
+    if (saveResponse.ok) {
+      await loadFreebeatHistory();
+    }
     
     // Start Polling
     startFreebeatVideoPolling(batchId, activeKey, estimatedCost);
@@ -1345,7 +1795,7 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         method: 'POST',
         headers: {
           'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/queryBatch',
-          'Authorization': activeKey.key,
+          'Authorization': activeKey.id, // Using Key ID resolved by server
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ batchId: batchId })
@@ -1362,58 +1812,64 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
       
       const status = String(item.status).toLowerCase();
       
-      // Update history item status
-      const historyItem = state.freebeatHistory.find(h => h.id === batchId);
-      if (historyItem) {
-        historyItem.status = (status === 'success' || status === 'completed' || status === 'finished') 
-          ? 'success' 
-          : ((status === 'failed' || status === 'rejected' || status === 'error') ? 'failed' : 'processing');
-        saveFreebeatHistory();
-        renderFreebeatHistory();
-      }
+      // Check status matching
+      const isSuccess = (status === 'success' || status === 'completed' || status === 'finished');
+      const isFailed = (status === 'failed' || status === 'rejected' || status === 'error');
       
-      if (status === 'success' || status === 'completed' || status === 'finished') {
+      if (isSuccess || isFailed) {
         clearInterval(state.freebeatVideoIntervals[batchId]);
         delete state.freebeatVideoIntervals[batchId];
         
-        // Deduct actual credits or estimated cost
-        const usedCredits = item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : (estimatedCost || 0));
+        let newStatus = isSuccess ? 'success' : 'failed';
+        let videoUrl = isSuccess ? item.videoUrl : '';
+        let errorMsg = isFailed ? (item.errorMessage || 'Proses render video di server Freebeat gagal.') : '';
         
-        // Track credit usage for this key
-        activeKey.usedCredits = (activeKey.usedCredits || 0) + usedCredits;
-        
-        // Deduct balance conditionally if it was detected
-        if (activeKey.balance !== null && activeKey.balance !== undefined) {
-          activeKey.balance = Math.max(0, activeKey.balance - usedCredits);
-        }
-        
-        saveFreebeatKeys();
-        renderFreebeatKeySelect();
-        renderFreebeatKeysList();
-        
-        // Update history item URL
+        // Update history item in Database
+        const historyItem = state.freebeatHistory.find(h => h.id === batchId);
         if (historyItem) {
-          historyItem.videoUrl = item.videoUrl;
-          saveFreebeatHistory();
-          renderFreebeatHistory();
-        }
-        
-        // Only update active main video player if this is the active generated video
-        showFreebeatVideoSuccess(item.videoUrl);
-      } else if (status === 'failed' || status === 'rejected' || status === 'error') {
-        clearInterval(state.freebeatVideoIntervals[batchId]);
-        delete state.freebeatVideoIntervals[batchId];
-        
-        const errorMsg = item.errorMessage || 'Proses render video di server Freebeat gagal.';
-        if (historyItem) {
+          historyItem.status = newStatus;
+          historyItem.videoUrl = videoUrl;
           historyItem.errorMsg = errorMsg;
-          saveFreebeatHistory();
-          renderFreebeatHistory();
+          
+          await fetch('/api/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(historyItem)
+          });
         }
         
-        showFreebeatVideoError(errorMsg);
+        if (isSuccess) {
+          // Deduct credits and update key balance
+          const usedCredits = item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : (estimatedCost || 0));
+          
+          // Track usage and save to DB
+          const newUsed = (activeKey.used_credits || 0) + usedCredits;
+          let newBalance = activeKey.balance;
+          if (activeKey.balance !== null && activeKey.balance !== undefined) {
+            newBalance = Math.max(0, activeKey.balance - usedCredits);
+          }
+          
+          await fetch('/api/freebeat-keys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: activeKey.id,
+              label: activeKey.label,
+              key: activeKey.key,
+              usedCredits: newUsed,
+              balance: newBalance
+            })
+          });
+          
+          await loadFreebeatKeys();
+          await loadFreebeatHistory();
+          showFreebeatVideoSuccess(videoUrl);
+        } else {
+          await loadFreebeatHistory();
+          showFreebeatVideoError(errorMsg);
+        }
       } else {
-        // Update loading status
+        // Update loading status text
         els.freebeatVideoLoaderText.textContent = `Rendering video... Status: ${status.toUpperCase()}`;
       }
     } catch (err) {
@@ -1457,91 +1913,6 @@ function downloadFreebeatVideo() {
   link.target = '_blank';
   link.click();
   showToast('Mengunduh video...', 'success');
-}
-
-async function autoDetectFreebeatBalance() {
-  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
-  if (!activeKey) {
-    showToast('Silakan pilih atau tambahkan API Key Freebeat terlebih dahulu!', 'error');
-    return;
-  }
-  
-  const refreshBtn = els.btnRefreshFreebeatBalance;
-  const icon = refreshBtn.querySelector('i');
-  if (icon) {
-    icon.classList.add('fa-spin');
-  }
-  refreshBtn.disabled = true;
-  
-  showToast('Menghubungi server Freebeat untuk menyinkronkan balance...', 'info');
-  try {
-    const response = await fetch('/proxy', {
-      method: 'GET',
-      headers: {
-        'x-target-url': 'https://api.freebeatfit.com/v1/credits',
-        'Authorization': activeKey.key
-      }
-    });
-    
-    if (response.ok) {
-      const text = await response.text();
-      if (text) {
-        try {
-          const data = JSON.parse(text);
-          if (data.code === 200 || data.code === 0) {
-            const credits = data.data.credits + (data.data.extra_credits || 0);
-            activeKey.balance = credits;
-            saveFreebeatKeys();
-            renderFreebeatKeySelect();
-            renderFreebeatKeysList();
-            showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
-            return;
-          }
-        } catch (e) {
-          // Silent catch to fall back
-        }
-      }
-    }
-    
-    // Probing user/info as well
-    const infoResponse = await fetch('/proxy', {
-      method: 'GET',
-      headers: {
-        'x-target-url': 'https://api.freebeatfit.com/v1/user/info',
-        'Authorization': activeKey.key
-      }
-    });
-    
-    if (infoResponse.ok) {
-      const text = await infoResponse.text();
-      if (text) {
-        try {
-          const data = JSON.parse(text);
-          if (data.code === 0 && data.data && data.data.credits !== undefined) {
-            const credits = data.data.credits + (data.data.extra_credits || 0);
-            activeKey.balance = credits;
-            saveFreebeatKeys();
-            renderFreebeatKeySelect();
-            renderFreebeatKeysList();
-            showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
-            return;
-          }
-        } catch (e) {
-          // Silent catch
-        }
-      }
-    }
-    
-    showToast('Cek Balance: API Developer Freebeat tidak menyediakan info sisa balance. Menggunakan pelacakan manual.', 'warning');
-  } catch (err) {
-    console.error('Error auto detecting balance:', err);
-    showToast('Gagal terhubung ke API Freebeat untuk cek balance.', 'error');
-  } finally {
-    if (icon) {
-      icon.classList.remove('fa-spin');
-    }
-    refreshBtn.disabled = false;
-  }
 }
 
 // Start application

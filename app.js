@@ -25,6 +25,82 @@ const state = {
   freebeatVideoIntervals: {} // { batchId: intervalId }
 };
 
+// Freebeat Video Studio Model Configurations (Duration & Cost Mapping)
+const modelConfigs = {
+  '94': {
+    name: 'Pixverse V6',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 345,
+      10: 495
+    }
+  },
+  '103': {
+    name: 'Pixverse C1',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 7,
+      10: 19
+    }
+  },
+  '104': {
+    name: 'Wan V2.7',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 2,
+      10: 15
+    }
+  },
+  '102': {
+    name: 'SeedDance 2.0',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 4,
+      10: 15
+    }
+  },
+  '101': {
+    name: 'SeedDance 2.0 Fast',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 4,
+      10: 15
+    }
+  },
+  '112': {
+    name: 'Kling V3 4K',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 3,
+      10: 15
+    }
+  },
+  '56': {
+    name: 'Sora 2 Pro',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 4,
+      10: 12
+    }
+  },
+  '111': {
+    name: 'HappyHorse',
+    durations: [5, 10],
+    defaultDuration: 5,
+    costs: {
+      5: 3,
+      10: 15
+    }
+  }
+};
+
 // Built-in Templates Data
 const templates = {
   'indomie-nyemek': {
@@ -115,7 +191,6 @@ const els = {
   btnCloseFreebeatModal: document.getElementById('btn-close-freebeat-modal'),
   freebeatKeysListContainer: document.getElementById('freebeat-keys-list-container'),
   newFreebeatKeyLabel: document.getElementById('new-freebeat-key-label'),
-  newFreebeatKeyBalance: document.getElementById('new-freebeat-key-balance'),
   newFreebeatKeyVal: document.getElementById('new-freebeat-key-val'),
   btnAddFreebeatKey: document.getElementById('btn-add-freebeat-key'),
 
@@ -154,6 +229,9 @@ function init() {
   loadFreebeatKeys();
   // Load Freebeat History
   loadFreebeatHistory();
+  
+  // Initialize duration options and cost display based on selected model
+  updateDurationOptionsAndCost();
 }
 
 // Sync Form Inputs to State
@@ -228,6 +306,10 @@ function setupEventListeners() {
   els.btnDownloadFreebeatVideo.addEventListener('click', downloadFreebeatVideo);
   els.btnClearFreebeatHistory.addEventListener('click', clearFreebeatHistory);
   els.btnRefreshFreebeatBalance.addEventListener('click', autoDetectFreebeatBalance);
+  
+  // Dynamic duration and cost calculation listeners
+  els.freebeatModelSelect.addEventListener('change', updateDurationOptionsAndCost);
+  els.freebeatDuration.addEventListener('change', updateEstimatedCostUI);
 }
 
 // Check connection quietly on load
@@ -704,14 +786,20 @@ function renderFreebeatKeySelect() {
     const masked = key.key.length > 12 
       ? `${key.key.substring(0, 6)}...${key.key.substring(key.key.length - 4)}` 
       : '***';
-    opt.textContent = `${key.label} (${masked})`;
+    const used = key.usedCredits || 0;
+    opt.textContent = `${key.label} (${masked}) • Terpakai: ${used} Cr`;
     els.freebeatKeySelect.appendChild(opt);
   });
   
   // Show/Hide active balance display
   const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
   if (activeKey) {
-    els.freebeatActiveBalanceDisplay.textContent = `${activeKey.balance} Credits`;
+    const used = activeKey.usedCredits || 0;
+    const hasBalance = (activeKey.balance !== undefined && activeKey.balance !== null);
+    const balanceText = hasBalance ? `<span style="display: inline-flex; align-items: center; gap: 4px; margin-left: 12px;"><i class="fa-solid fa-wallet" style="color: var(--text-muted);"></i> Sisa: <strong>${activeKey.balance} Credits</strong></span>` : '';
+    els.freebeatActiveBalanceDisplay.innerHTML = `
+      <span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> Terpakai: <strong>${used} Credits</strong></span>${balanceText}
+    `;
     els.freebeatActiveBalanceWrapper.style.display = 'block';
   } else {
     els.freebeatActiveBalanceWrapper.style.display = 'none';
@@ -736,6 +824,9 @@ function renderFreebeatKeysList() {
     
     const isActive = (key.id === state.activeFreebeatKeyId);
     const activeBadge = isActive ? '<span class="freebeat-key-active-badge">Aktif</span>' : '';
+    const used = key.usedCredits || 0;
+    const hasBalance = (key.balance !== undefined && key.balance !== null);
+    const balanceSpan = hasBalance ? `<span><i class="fa-solid fa-wallet" style="color: var(--text-muted); margin-right: 4px;"></i>Sisa: <strong>${key.balance}</strong> Credits</span>` : '';
     
     item.innerHTML = `
       <div class="freebeat-key-info">
@@ -744,19 +835,15 @@ function renderFreebeatKeysList() {
           ${activeBadge}
         </div>
         <span class="freebeat-key-masked">${masked}</span>
+        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 12px;">
+          <span><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold); margin-right: 4px;"></i>Terpakai: <strong>${used}</strong> Credits</span>
+          ${balanceSpan}
+        </div>
       </div>
       <div class="freebeat-key-actions">
-        <input type="number" class="freebeat-key-balance-input" value="${key.balance}" title="Ubah balance secara manual" data-id="${key.id}">
         <button class="btn-delete-key" data-id="${key.id}" title="Hapus API Key"><i class="fa-solid fa-trash"></i></button>
       </div>
     `;
-    
-    // Add event listeners inside loop
-    item.querySelector('.freebeat-key-balance-input').addEventListener('change', (e) => {
-      const keyId = e.target.getAttribute('data-id');
-      const val = parseInt(e.target.value, 10) || 0;
-      handleEditKeyBalance(keyId, val);
-    });
     
     item.querySelector('.btn-delete-key').addEventListener('click', (e) => {
       const btn = e.currentTarget;
@@ -770,10 +857,9 @@ function renderFreebeatKeysList() {
 
 function handleAddFreebeatKey() {
   const label = els.newFreebeatKeyLabel.value.trim();
-  const balance = parseInt(els.newFreebeatKeyBalance.value, 10);
   const keyVal = els.newFreebeatKeyVal.value.trim();
   
-  if (!label || isNaN(balance) || !keyVal) {
+  if (!label || !keyVal) {
     showToast('Semua field wajib diisi!', 'error');
     return;
   }
@@ -783,7 +869,8 @@ function handleAddFreebeatKey() {
     id: newId,
     label: label,
     key: keyVal,
-    balance: balance
+    balance: null,
+    usedCredits: 0
   };
   
   state.freebeatKeys.push(newKey);
@@ -795,13 +882,14 @@ function handleAddFreebeatKey() {
   
   // Reset fields
   els.newFreebeatKeyLabel.value = '';
-  els.newFreebeatKeyBalance.value = '';
   els.newFreebeatKeyVal.value = '';
   
   saveFreebeatKeys();
   renderFreebeatKeySelect();
   renderFreebeatKeysList();
   showToast('API Key Freebeat berhasil ditambahkan!', 'success');
+  
+  autoDetectFreebeatBalance();
 }
 
 function handleDeleteFreebeatKey(keyId) {
@@ -831,8 +919,10 @@ function handleSelectFreebeatKey() {
   state.activeFreebeatKeyId = els.freebeatKeySelect.value;
   saveFreebeatKeys();
   renderFreebeatKeySelect();
-  renderFreebeatKeysList(); // To show updated active badge
+  renderFreebeatKeysList();
   showToast('API Key Aktif diganti.', 'info');
+  
+  autoDetectFreebeatBalance();
 }
 
 function openFreebeatKeysModal() {
@@ -852,18 +942,54 @@ function closeFreebeatKeysModal() {
   }, 250);
 }
 
-// Freebeat Video Studio API helpers
-function getEstimatedCreditCost(modelId, duration, resolution) {
-  // Model mapping based on freebeat-mcp
-  if (modelId === '94') { // Pixverse V6
-    return (resolution === '1080p' || duration > 5) ? 495 : 345;
+// Dynamic Duration and Credit Cost Auto-detection
+function updateDurationOptionsAndCost() {
+  const modelId = els.freebeatModelSelect.value;
+  const config = modelConfigs[modelId];
+  if (!config) return;
+  
+  const currentDuration = parseInt(els.freebeatDuration.value, 10) || 5;
+  
+  els.freebeatDuration.innerHTML = '';
+  config.durations.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = `${d} Detik`;
+    if (d === currentDuration) {
+      opt.selected = true;
+    }
+    els.freebeatDuration.appendChild(opt);
+  });
+  
+  if (!config.durations.includes(currentDuration)) {
+    els.freebeatDuration.value = config.defaultDuration;
   }
-  if (modelId === '103') return 10; // Pixverse C1
-  if (modelId === '104') return 10; // Wan
-  if (modelId === '102' || modelId === '101') return 12; // SeedDance
-  if (modelId === '112') return 15; // Kling
-  if (modelId === '56') return 20; // Sora
-  if (modelId === '111') return 10; // HappyHorse
+  
+  updateEstimatedCostUI();
+}
+
+function updateEstimatedCostUI() {
+  const modelId = els.freebeatModelSelect.value;
+  const duration = parseInt(els.freebeatDuration.value, 10) || 5;
+  const cost = getEstimatedCreditCost(modelId, duration);
+  
+  const costDisplay = document.getElementById('freebeat-estimated-cost');
+  if (costDisplay) {
+    costDisplay.textContent = `${cost} Credits`;
+  }
+}
+
+// Freebeat Video Studio API helpers
+function getEstimatedCreditCost(modelId, duration) {
+  const d = parseInt(duration, 10) || 5;
+  if (modelId === '94') return d <= 5 ? 345 : 495;
+  if (modelId === '103') return d <= 5 ? 7 : 19;
+  if (modelId === '104') return d <= 5 ? 2 : 15;
+  if (modelId === '102') return d <= 5 ? 4 : 15;
+  if (modelId === '101') return d <= 5 ? 4 : 15;
+  if (modelId === '112') return d <= 5 ? 3 : 15;
+  if (modelId === '56') return d <= 5 ? 4 : 12;
+  if (modelId === '111') return d <= 5 ? 3 : 15;
   return 10;
 }
 
@@ -893,7 +1019,7 @@ function loadFreebeatHistory() {
       if (activeKey) {
         state.freebeatHistory.forEach(item => {
           if (item.status === 'processing') {
-            const cost = getEstimatedCreditCost(item.modelId, item.duration, item.resolution);
+            const cost = getEstimatedCreditCost(item.modelId, item.duration);
             startFreebeatVideoPolling(item.id, activeKey, cost);
           }
         });
@@ -1069,8 +1195,8 @@ async function handleGenerateFreebeatVideo() {
   const generate_audio = els.freebeatGenerateAudio.checked;
   const audioValue = generate_audio ? 1 : 0;
   
-  const estimatedCost = getEstimatedCreditCost(modelId, duration, resolution);
-  if (activeKey.balance < estimatedCost) {
+  const estimatedCost = getEstimatedCreditCost(modelId, duration);
+  if (activeKey.balance !== null && activeKey.balance !== undefined && activeKey.balance < estimatedCost) {
     showToast(`Balance tidak mencukupi! Estimasi biaya: ${estimatedCost} credits, Balance Anda: ${activeKey.balance} credits.`, 'error');
     return;
   }
@@ -1208,10 +1334,18 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         
         // Deduct actual credits or estimated cost
         const usedCredits = item.usedCredits !== undefined ? item.usedCredits : estimatedCost;
-        activeKey.balance = Math.max(0, activeKey.balance - usedCredits);
+        
+        // Track credit usage for this key
+        activeKey.usedCredits = (activeKey.usedCredits || 0) + usedCredits;
+        
+        // Deduct balance conditionally if it was detected
+        if (activeKey.balance !== null && activeKey.balance !== undefined) {
+          activeKey.balance = Math.max(0, activeKey.balance - usedCredits);
+        }
         
         saveFreebeatKeys();
         renderFreebeatKeySelect();
+        renderFreebeatKeysList();
         
         // Update history item URL
         if (historyItem) {
@@ -1315,6 +1449,7 @@ async function autoDetectFreebeatBalance() {
             activeKey.balance = credits;
             saveFreebeatKeys();
             renderFreebeatKeySelect();
+            renderFreebeatKeysList();
             showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
             return;
           }
@@ -1343,6 +1478,7 @@ async function autoDetectFreebeatBalance() {
             activeKey.balance = credits;
             saveFreebeatKeys();
             renderFreebeatKeySelect();
+            renderFreebeatKeysList();
             showToast(`Balance berhasil disinkronkan: ${credits} Credits!`, 'success');
             return;
           }

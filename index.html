@@ -357,7 +357,10 @@
                 <label for="freebeat-duration">Durasi (Detik)</label>
                 <div class="input-wrapper">
                   <i class="fa-solid fa-clock input-icon"></i>
-                  <input type="number" id="freebeat-duration" value="5" min="2" max="15" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                  <select id="freebeat-duration" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                    <option value="5" selected>5 Detik</option>
+                    <option value="10">10 Detik</option>
+                  </select>
                 </div>
               </div>
               
@@ -379,6 +382,12 @@
                 <input type="checkbox" id="freebeat-generate-audio" style="width: 16px; height: 16px; accent-color: var(--accent-gold);">
                 <span style="font-size: 13px; color: var(--text-primary);">Generate Audio (jika didukung model)</span>
               </label>
+            </div>
+
+            <!-- Dynamic Cost Detection Display -->
+            <div id="freebeat-cost-info-wrapper" style="margin-bottom: 16px; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calculator" style="margin-right: 6px; color: var(--accent-gold);"></i>Estimasi Biaya:</span>
+              <span id="freebeat-estimated-cost" style="font-size: 14px; font-weight: 700; color: var(--accent-gold);">345 Credits</span>
             </div>
 
             <!-- Generation Action -->
@@ -464,7 +473,7 @@
       </h3>
       
       <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
-        Tambahkan satu atau beberapa API Key Freebeat Anda beserta estimasi balance credits. Anda dapat mengubah nominal balance secara manual untuk melacak penggunaan Anda.
+        Tambahkan satu atau beberapa API Key Freebeat Anda. Aplikasi akan melacak penggunaan kredit secara otomatis untuk setiap kunci.
       </p>
 
       <!-- Key list -->
@@ -476,13 +485,8 @@
       <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
         <h4 style="font-size: 13px; color: var(--text-primary); margin-bottom: 12px;">Tambah API Key Baru</h4>
         <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div style="display: flex; gap: 10px;">
-            <div style="flex: 2;">
-              <input type="text" id="new-freebeat-key-label" placeholder="Nama Key (misal: Key Utama)" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 12px; font-size: 13px;">
-            </div>
-            <div style="flex: 1;">
-              <input type="number" id="new-freebeat-key-balance" placeholder="Balance Credits" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 12px; font-size: 13px;">
-            </div>
+          <div>
+            <input type="text" id="new-freebeat-key-label" placeholder="Nama Key (misal: Key Utama)" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 12px; font-size: 13px;">
           </div>
           <div style="position: relative;">
             <input type="password" id="new-freebeat-key-val" placeholder="Freebeat API Key (sk-...)" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 36px 8px 12px; font-size: 13px;">

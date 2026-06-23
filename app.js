@@ -25,64 +25,86 @@ const state = {
   freebeatVideoIntervals: {} // { batchId: intervalId }
 };
 
-// Freebeat Video Studio Model Configurations (Duration & Cost Mapping)
+// Freebeat Video Studio Model Configurations (Duration, Resolution & Cost Mapping)
 const modelConfigs = {
   '94': {
     name: 'Pixverse V6',
-    allowedDurations: [5, 10],
+    minDuration: 5,
+    maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d, res) => (res === '1080p' || d > 5) ? 495 : 345
+    allowedResolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    getCost: (d, res) => res === '1080p' ? 495 : 345
   },
   '103': {
     name: 'Pixverse C1',
-    minDuration: 7,
-    maxDuration: 19,
-    defaultDuration: 10,
-    getCost: (d) => d
+    minDuration: 1,
+    maxDuration: 15,
+    defaultDuration: 5,
+    allowedResolutions: ['360p', '540p', '720p', '1080p'],
+    defaultResolution: '720p',
+    getCost: (d, res) => {
+      if (res === '360p') return 7;
+      if (res === '540p') return 8;
+      if (res === '1080p') return 19;
+      return 10;
+    }
   },
   '104': {
     name: 'Wan V2.7',
     minDuration: 2,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d) => d
+    allowedResolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    getCost: null
   },
   '102': {
     name: 'SeedDance 2.0',
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d) => d
+    allowedResolutions: ['720p'],
+    defaultResolution: '720p',
+    getCost: null
   },
   '101': {
     name: 'SeedDance 2.0 Fast',
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d) => d
+    allowedResolutions: ['720p'],
+    defaultResolution: '720p',
+    getCost: null
   },
   '112': {
     name: 'Kling V3 4K',
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d) => d
+    allowedResolutions: ['4k'],
+    defaultResolution: '4k',
+    getCost: null
   },
   '56': {
     name: 'Sora 2 Pro',
-    minDuration: 4,
-    maxDuration: 12,
-    defaultDuration: 5,
-    getCost: (d) => d
+    allowedDurations: [4, 8, 12],
+    defaultDuration: 4,
+    allowedResolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    getCost: null
   },
   '111': {
     name: 'HappyHorse',
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
-    getCost: (d) => d
+    allowedResolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    getCost: null
   }
 };
+
 
 // Built-in Templates Data
 const templates = {
@@ -926,14 +948,14 @@ function closeFreebeatKeysModal() {
   }, 250);
 }
 
-// Dynamic Duration and Credit Cost Auto-detection
+// Dynamic Duration, Resolution and Credit Cost Auto-detection
 function updateDurationOptionsAndCost() {
   const modelId = els.freebeatModelSelect.value;
   const config = modelConfigs[modelId];
   if (!config) return;
   
+  // 1. Populate Durations
   const currentDuration = parseInt(els.freebeatDuration.value, 10) || 5;
-  
   els.freebeatDuration.innerHTML = '';
   
   let durations = [];
@@ -960,6 +982,26 @@ function updateDurationOptionsAndCost() {
     els.freebeatDuration.value = defaultDuration;
   }
   
+  // 2. Populate Resolutions
+  const currentResolution = els.freebeatResolution.value || '720p';
+  els.freebeatResolution.innerHTML = '';
+  
+  const resolutions = config.allowedResolutions || ['720p', '1080p'];
+  resolutions.forEach(res => {
+    const opt = document.createElement('option');
+    opt.value = res;
+    opt.textContent = res === '4k' ? '4K (Ultra HD)' : res;
+    if (res === currentResolution) {
+      opt.selected = true;
+    }
+    els.freebeatResolution.appendChild(opt);
+  });
+  
+  const defaultResolution = config.defaultResolution || resolutions[0] || '720p';
+  if (!resolutions.includes(currentResolution)) {
+    els.freebeatResolution.value = defaultResolution;
+  }
+  
   updateEstimatedCostUI();
 }
 
@@ -969,19 +1011,30 @@ function updateEstimatedCostUI() {
   const resolution = els.freebeatResolution.value || '720p';
   const cost = getEstimatedCreditCost(modelId, duration, resolution);
   
+  const costWrapper = document.getElementById('freebeat-cost-info-wrapper');
   const costDisplay = document.getElementById('freebeat-estimated-cost');
-  if (costDisplay) {
-    costDisplay.textContent = `${cost} Credits`;
+  
+  if (cost === null || cost === undefined) {
+    if (costWrapper) {
+      costWrapper.style.display = 'none';
+    }
+  } else {
+    if (costWrapper) {
+      costWrapper.style.display = 'flex';
+    }
+    if (costDisplay) {
+      costDisplay.textContent = `${cost} Credits`;
+    }
   }
 }
 
 // Freebeat Video Studio API helpers
 function getEstimatedCreditCost(modelId, duration, resolution) {
   const config = modelConfigs[modelId];
-  if (config) {
+  if (config && typeof config.getCost === 'function') {
     return config.getCost(parseInt(duration, 10) || 5, resolution || '720p');
   }
-  return 10;
+  return null;
 }
 
 function getModelDisplayName(modelId) {
@@ -1187,7 +1240,7 @@ async function handleGenerateFreebeatVideo() {
   const audioValue = generate_audio ? 1 : 0;
   
   const estimatedCost = getEstimatedCreditCost(modelId, duration, resolution);
-  if (activeKey.balance !== null && activeKey.balance !== undefined && activeKey.balance < estimatedCost) {
+  if (estimatedCost !== null && activeKey.balance !== null && activeKey.balance !== undefined && activeKey.balance < estimatedCost) {
     showToast(`Balance tidak mencukupi! Estimasi biaya: ${estimatedCost} credits, Balance Anda: ${activeKey.balance} credits.`, 'error');
     return;
   }
@@ -1324,7 +1377,7 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         delete state.freebeatVideoIntervals[batchId];
         
         // Deduct actual credits or estimated cost
-        const usedCredits = item.usedCredits !== undefined ? item.usedCredits : estimatedCost;
+        const usedCredits = item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : (estimatedCost || 0));
         
         // Track credit usage for this key
         activeKey.usedCredits = (activeKey.usedCredits || 0) + usedCredits;

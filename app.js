@@ -1773,7 +1773,7 @@ function startFreebeatImagePolling(batchId, activeKey) {
         });
         
         if (successes.length === items.length) {
-          const imgUrl1 = successes[0].imageUrl;
+          const imgUrl1 = successes[0].imageUrl || successes[0].videoUrl;
           if (!imgUrl1) {
             showToast('Gagal: Image URL 1 kosong dari response Freebeat.', 'error');
             els.combinedImagePlaceholder.style.display = 'flex';
@@ -1786,7 +1786,7 @@ function startFreebeatImagePolling(batchId, activeKey) {
           els.combinedStoryboardImage.style.display = 'block';
           
           if (items.length > 1) {
-            const imgUrl2 = successes[1].imageUrl;
+            const imgUrl2 = successes[1].imageUrl || successes[1].videoUrl;
             if (imgUrl2) {
               state.combinedImage2 = imgUrl2;
               els.combinedStoryboardImage2.src = imgUrl2;
@@ -2417,8 +2417,12 @@ async function loadFreebeatHistory() {
       if (activeKey) {
         state.freebeatHistory.forEach(item => {
           if (item.status === 'processing') {
-            const cost = getEstimatedCreditCost(item.modelId, item.duration, item.resolution);
-            startFreebeatVideoPolling(item.id, activeKey, cost);
+            if (item.type === 'image') {
+              startFreebeatImagePolling(item.id, activeKey);
+            } else {
+              const cost = getEstimatedCreditCost(item.modelId, item.duration, item.resolution);
+              startFreebeatVideoPolling(item.id, activeKey, cost);
+            }
           }
         });
       }
@@ -2901,7 +2905,7 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
         delete state.freebeatVideoIntervals[batchId];
         
         let newStatus = isSuccess ? 'success' : 'failed';
-        let videoUrl = isSuccess ? item.videoUrl : '';
+        let videoUrl = isSuccess ? (item.videoUrl || item.imageUrl || '') : '';
         let errorMsg = isFailed ? (item.errorMessage || 'Proses render video di server Freebeat gagal.') : '';
         
         // Update history item in Database

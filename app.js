@@ -40,6 +40,7 @@ const state = {
 const modelConfigs = {
   '94': {
     name: 'Pixverse V6',
+    supportedModes: [1, 2], // 1: T2V, 2: I2V
     minDuration: 5,
     maxDuration: 15,
     defaultDuration: 5,
@@ -49,6 +50,7 @@ const modelConfigs = {
   },
   '103': {
     name: 'Pixverse C1',
+    supportedModes: [1, 2, 3], // 1: T2V, 2: I2V, 3: V2V
     minDuration: 1,
     maxDuration: 15,
     defaultDuration: 5,
@@ -63,6 +65,7 @@ const modelConfigs = {
   },
   '104': {
     name: 'Wan V2.7',
+    supportedModes: [1, 2, 3],
     minDuration: 2,
     maxDuration: 15,
     defaultDuration: 5,
@@ -72,6 +75,7 @@ const modelConfigs = {
   },
   '102': {
     name: 'SeedDance 2.0',
+    supportedModes: [1, 2, 3],
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
@@ -81,6 +85,7 @@ const modelConfigs = {
   },
   '101': {
     name: 'SeedDance 2.0 Fast',
+    supportedModes: [1, 2, 3],
     minDuration: 4,
     maxDuration: 15,
     defaultDuration: 5,
@@ -90,6 +95,7 @@ const modelConfigs = {
   },
   '112': {
     name: 'Kling V3 4K',
+    supportedModes: [1, 2],
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
@@ -99,6 +105,7 @@ const modelConfigs = {
   },
   '56': {
     name: 'Sora 2 Pro',
+    supportedModes: [1],
     allowedDurations: [4, 8, 12],
     defaultDuration: 4,
     allowedResolutions: ['720p', '1080p'],
@@ -107,6 +114,7 @@ const modelConfigs = {
   },
   '111': {
     name: 'HappyHorse',
+    supportedModes: [1, 3],
     minDuration: 3,
     maxDuration: 15,
     defaultDuration: 5,
@@ -309,6 +317,7 @@ const els = {
 function init() {
   setupEventListeners();
   setupTabNavigation();
+  updateModelOptions();
   checkSession();
 }
 
@@ -1799,6 +1808,8 @@ function handleSelectVideoMode() {
     els.freebeatI2vInputs.style.display = 'none';
     els.freebeatV2vInputs.style.display = 'block';
   }
+  
+  updateModelOptions();
 }
 
 // I2V Image Handlers
@@ -1957,6 +1968,50 @@ function dataURLtoBlob(dataurl) {
 // ----------------------------------------------------
 // 6. Freebeat Video Studio Operations & History
 // ----------------------------------------------------
+
+// Filter models select options based on current video mode
+function updateModelOptions() {
+  const currentMode = state.videoGenerationType || 1;
+  const currentSelectedModel = els.freebeatModelSelect.value;
+  
+  els.freebeatModelSelect.innerHTML = '';
+  
+  const displayNames = {
+    '94': 'Pixverse V6 (Premium - 5-15 Detik)',
+    '103': 'Pixverse C1 (Standard - 1-15 Detik)',
+    '104': 'Wan V2.7 (Universal - 2-15 Detik)',
+    '102': 'SeedDance 2.0 (Dynamic - 4-15 Detik)',
+    '101': 'SeedDance 2.0 Fast (Fast - 4-15 Detik)',
+    '112': 'Kling V3 4K (Cinematic - 3-15 Detik)',
+    '56': 'Sora 2 Pro (Ultra Quality - 4/8/12 Detik)',
+    '111': 'HappyHorse (Fun/Creative - 3-15 Detik)'
+  };
+  
+  let firstCompatibleModel = null;
+  let keepSelected = false;
+  
+  Object.entries(modelConfigs).forEach(([id, config]) => {
+    if (config.supportedModes && config.supportedModes.includes(currentMode)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = displayNames[id] || config.name;
+      if (id === currentSelectedModel) {
+        opt.selected = true;
+        keepSelected = true;
+      }
+      els.freebeatModelSelect.appendChild(opt);
+      if (!firstCompatibleModel) {
+        firstCompatibleModel = id;
+      }
+    }
+  });
+  
+  if (!keepSelected && firstCompatibleModel) {
+    els.freebeatModelSelect.value = firstCompatibleModel;
+  }
+  
+  updateDurationOptionsAndCost();
+}
 
 // Dynamic Duration, Resolution and Credit Cost Auto-detection
 function updateDurationOptionsAndCost() {
@@ -2173,7 +2228,19 @@ function showFreebeatVideoPlayer(recipeTitle, videoUrl) {
 }
 
 function handleRegenerateFromHistory(item) {
+  const modelId = item.modelId;
+  const config = modelConfigs[modelId];
+  if (config && config.supportedModes) {
+    if (!config.supportedModes.includes(state.videoGenerationType)) {
+      const targetMode = config.supportedModes[0] || 1;
+      els.freebeatGenerationType.value = targetMode;
+      handleSelectVideoMode();
+    }
+  }
+  
   els.freebeatModelSelect.value = item.modelId;
+  updateDurationOptionsAndCost();
+  
   els.freebeatDuration.value = item.duration;
   els.freebeatAspectRatio.value = item.aspectRatio;
   els.freebeatResolution.value = item.resolution;

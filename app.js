@@ -8,7 +8,7 @@ const state = {
   masterSeedancePrompt: '',
   combinedImage: '',
   textModel: 'gpt-4o-mini',
-  imageModel: 'gemini-3.1-flash-image',
+  imageModel: '108',
   sceneCount: 11,
   productImage: '',
   characterImage: '',
@@ -19,7 +19,17 @@ const state = {
   
   // History and Multiple Polling State
   freebeatHistory: [], // [{ id: 'batchId', recipeTitle: '...', prompt: '...', modelId: '...', duration: 5, resolution: '720p', aspectRatio: '9:16', generateAudio: false, timestamp: 1234567, status: 'success'/'failed'/'processing', videoUrl: '...', errorMsg: '...' }]
-  freebeatVideoIntervals: {} // { batchId: intervalId }
+  freebeatVideoIntervals: {}, // { batchId: intervalId }
+  
+  // Selected reference files/URLs for Video generation
+  vStartFile: null,
+  vStartImage: '',
+  vEndFile: null,
+  vEndImage: '',
+  vRefFile: null,
+  vRefVideo: '',
+  videoGenerationType: 1,
+  freebeatImageIntervals: {} // { batchId: intervalId }
 };
 
 // Freebeat Video Studio Model Configurations (Duration, Resolution & Cost Mapping)
@@ -227,6 +237,31 @@ const els = {
   freebeatResolution: document.getElementById('freebeat-resolution'),
   freebeatGenerateAudio: document.getElementById('freebeat-generate-audio'),
   btnGenerateFreebeatVideo: document.getElementById('btn-generate-freebeat-video'),
+  freebeatGenerationType: document.getElementById('freebeat-generation-type'),
+  
+  // Conditionally visible containers
+  freebeatI2vInputs: document.getElementById('freebeat-i2v-inputs'),
+  freebeatV2vInputs: document.getElementById('freebeat-v2v-inputs'),
+
+  // I2V Inputs
+  btnUploadVStart: document.getElementById('btn-upload-v-start'),
+  btnUseStoryboardStart: document.getElementById('btn-use-storyboard-start'),
+  freebeatVStartInput: document.getElementById('freebeat-v-start-input'),
+  vStartPreviewContainer: document.getElementById('v-start-preview-container'),
+  vStartPreviewImg: document.getElementById('v-start-preview-img'),
+
+  btnUploadVEnd: document.getElementById('btn-upload-v-end'),
+  btnUseStoryboardEnd: document.getElementById('btn-use-storyboard-end'),
+  freebeatVEndInput: document.getElementById('freebeat-v-end-input'),
+  vEndPreviewContainer: document.getElementById('v-end-preview-container'),
+  vEndPreviewImg: document.getElementById('v-end-preview-img'),
+
+  // V2V Inputs
+  btnUploadVRef: document.getElementById('btn-upload-v-ref'),
+  freebeatVRefInput: document.getElementById('freebeat-v-ref-input'),
+  freebeatVRefUrl: document.getElementById('freebeat-v-ref-url'),
+  vRefPreviewContainer: document.getElementById('v-ref-preview-container'),
+  vRefPreviewVideo: document.getElementById('v-ref-preview-video'),
 
   // Freebeat Video Output Elements
   freebeatVideoStatusContainer: document.getElementById('freebeat-video-status-container'),
@@ -470,6 +505,22 @@ function setupEventListeners() {
   els.btnGenerateFreebeatVideo.addEventListener('click', handleGenerateFreebeatVideo);
   els.btnDownloadFreebeatVideo.addEventListener('click', downloadFreebeatVideo);
   els.btnRefreshFreebeatBalance.addEventListener('click', autoDetectFreebeatBalance);
+  
+  // Video Mode triggering
+  els.freebeatGenerationType.addEventListener('change', handleSelectVideoMode);
+  
+  // I2V event listeners
+  els.btnUploadVStart.addEventListener('click', () => els.freebeatVStartInput.click());
+  els.freebeatVStartInput.addEventListener('change', handleVStartImageUpload);
+  els.btnUseStoryboardStart.addEventListener('click', handleUseStoryboardStart);
+
+  els.btnUploadVEnd.addEventListener('click', () => els.freebeatVEndInput.click());
+  els.freebeatVEndInput.addEventListener('change', handleVEndImageUpload);
+  els.btnUseStoryboardEnd.addEventListener('click', handleUseStoryboardEnd);
+
+  // V2V event listeners
+  els.btnUploadVRef.addEventListener('click', () => els.freebeatVRefInput.click());
+  els.freebeatVRefInput.addEventListener('change', handleVRefVideoUpload);
   
   // Dynamic duration and cost calculation listeners
   els.freebeatModelSelect.addEventListener('change', updateDurationOptionsAndCost);
@@ -1097,6 +1148,23 @@ function loadTemplate(templateId) {
   els.btnDownloadCombined.disabled = true;
   els.btnExportStoryboard.disabled = true;
   
+  // Reset I2V/V2V states
+  state.vStartFile = null;
+  state.vStartImage = '';
+  state.vEndFile = null;
+  state.vEndImage = '';
+  state.vRefFile = null;
+  state.vRefVideo = '';
+  state.videoGenerationType = 1;
+  
+  els.freebeatGenerationType.value = "1";
+  els.freebeatI2vInputs.style.display = 'none';
+  els.freebeatV2vInputs.style.display = 'none';
+  els.vStartPreviewContainer.style.display = 'none';
+  els.vEndPreviewContainer.style.display = 'none';
+  els.vRefPreviewContainer.style.display = 'none';
+  els.freebeatVRefUrl.value = '';
+  
   // Set prompts editor values
   els.masterGridPrompt.value = state.masterGridPrompt;
   els.masterSeedancePrompt.value = state.masterSeedancePrompt;
@@ -1144,6 +1212,32 @@ function clearStoryboard() {
   if (state.characterImage) {
     clearCharacterImage();
   }
+  
+  // Reset I2V/V2V states
+  state.vStartFile = null;
+  state.vStartImage = '';
+  state.vEndFile = null;
+  state.vEndImage = '';
+  state.vRefFile = null;
+  state.vRefVideo = '';
+  state.videoGenerationType = 1;
+  
+  els.freebeatGenerationType.value = "1";
+  els.freebeatI2vInputs.style.display = 'none';
+  els.freebeatV2vInputs.style.display = 'none';
+  
+  els.vStartPreviewContainer.style.display = 'none';
+  els.vStartPreviewImg.src = '';
+  els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-image"></i> Upload Gambar Awal';
+  
+  els.vEndPreviewContainer.style.display = 'none';
+  els.vEndPreviewImg.src = '';
+  els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-image"></i> Upload Gambar Akhir';
+  
+  els.freebeatVRefUrl.value = '';
+  els.vRefPreviewContainer.style.display = 'none';
+  els.vRefPreviewVideo.src = '';
+  els.btnUploadVRef.innerHTML = '<i class="fa-solid fa-video"></i> Upload File Video';
   
   // Clear prompts
   els.masterGridPrompt.value = '';
@@ -1314,6 +1408,12 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
 
 // API Generation: Generate the Single Combined Grid Image using the Master Grid Prompt
 async function generateCombinedStoryboardImage() {
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (!activeKey) {
+    showToast('Silakan pilih atau tambahkan API Key Freebeat terlebih dahulu!', 'error');
+    return;
+  }
+
   const prompt = els.masterGridPrompt.value.trim();
   if (!prompt) {
     showToast('Master grid prompt kosong! Harap muat template atau buat dengan AI.', 'error');
@@ -1327,45 +1427,56 @@ async function generateCombinedStoryboardImage() {
   els.combinedImagePlaceholder.style.display = 'none';
   els.combinedStoryboardImage.style.display = 'none';
   els.combinedImageLoader.style.display = 'flex';
-  els.combinedLoaderText.textContent = 'Generating Storyboard Grid Image (1 Prompt)...';
+  els.combinedLoaderText.textContent = 'Memulai antrean render Image Studio...';
   
+  const requestBody = {
+    items: [
+      {
+        businessType: 9,
+        modelId: String(state.imageModel),
+        generationType: 6,
+        prompt: prompt,
+        size: "1024x1024",
+        resolution: "1024x1024",
+        quality: "medium",
+        count: 1
+      }
+    ]
+  };
+
   try {
-    const response = await fetch('/api/ai/chat/completions', {
+    const response = await fetch('/proxy', {
       method: 'POST',
       headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/createImageBatch',
+        'Authorization': activeKey.id,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: state.imageModel,
-        messages: [
-          { role: 'user', content: prompt }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error || `Server error: ${response.status}`);
+      throw new Error(`Koneksi API gagal. HTTP status: ${response.status}`);
     }
     
     const data = await response.json();
-    const markdownContent = data.choices[0].message.content;
-    
-    const base64Match = markdownContent.match(/!\[.*?\]\((data:image\/[a-zA-Z]+;base64,.*?)\)/);
-    if (base64Match) {
-      state.combinedImage = base64Match[1];
-      
-      // Update image UI
-      els.combinedStoryboardImage.src = state.combinedImage;
-      els.combinedStoryboardImage.style.display = 'block';
-      els.combinedImagePlaceholder.style.display = 'none';
-      
-      els.btnDownloadCombined.disabled = false;
-      els.btnExportStoryboard.disabled = false;
-      showToast('Gambar infografis storyboard berhasil dibuat!', 'success');
-    } else {
-      throw new Error('Gagal mengekstrak data base64 gambar dari response API.');
+    if (data.code !== 0) {
+      throw new Error(data.msg || 'Terjadi kesalahan dari API Freebeat');
     }
+    
+    const batchData = data.data;
+    const batchId = batchData.batchId;
+    const item = batchData.items[0];
+    
+    if (item && !item.accepted) {
+      throw new Error(item.message || 'Render gambar ditolak oleh server Freebeat.');
+    }
+    
+    els.combinedLoaderText.textContent = 'Render gambar diterima! Menunggu antrean rendering...';
+    showToast('Render gambar berhasil dibuat! Memulai polling...', 'success');
+    
+    startFreebeatImagePolling(batchId, activeKey);
+    
   } catch (error) {
     console.error('Combined image generation error:', error);
     showToast(`Gagal: ${error.message}`, 'error');
@@ -1373,13 +1484,84 @@ async function generateCombinedStoryboardImage() {
     // Restore empty placeholder
     els.combinedImagePlaceholder.style.display = 'flex';
     els.combinedStoryboardImage.style.display = 'none';
+    els.combinedImageLoader.style.display = 'none';
     els.btnDownloadCombined.disabled = true;
     els.btnExportStoryboard.disabled = true;
-  } finally {
-    els.combinedImageLoader.style.display = 'none';
+    
     els.btnGenerateCombinedImage.disabled = false;
     els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)';
   }
+}
+
+// Poll status of image generation
+function startFreebeatImagePolling(batchId, activeKey) {
+  if (state.freebeatImageIntervals[batchId]) {
+    clearInterval(state.freebeatImageIntervals[batchId]);
+  }
+  
+  state.freebeatImageIntervals[batchId] = setInterval(async () => {
+    try {
+      const response = await fetch('/proxy', {
+        method: 'POST',
+        headers: {
+          'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/queryBatch',
+          'Authorization': activeKey.id,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ batchId: batchId })
+      });
+      
+      if (!response.ok) return; // Silent retry
+      
+      const data = await response.json();
+      if (data.code !== 0) return; // Silent retry
+      
+      const batchData = data.data;
+      const item = batchData.items[0];
+      if (!item) return;
+      
+      const status = String(item.status).toLowerCase();
+      const isSuccess = (status === 'success' || status === 'completed' || status === 'finished');
+      const isFailed = (status === 'failed' || status === 'rejected' || status === 'error');
+      
+      if (isSuccess || isFailed) {
+        clearInterval(state.freebeatImageIntervals[batchId]);
+        delete state.freebeatImageIntervals[batchId];
+        
+        els.combinedImageLoader.style.display = 'none';
+        els.btnGenerateCombinedImage.disabled = false;
+        els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)';
+        
+        if (isSuccess) {
+          const imageUrl = item.imageUrl;
+          if (!imageUrl) {
+            showToast('Gagal: Image URL kosong dari response Freebeat.', 'error');
+            els.combinedImagePlaceholder.style.display = 'flex';
+            els.combinedStoryboardImage.style.display = 'none';
+            return;
+          }
+          
+          state.combinedImage = imageUrl;
+          els.combinedStoryboardImage.src = imageUrl;
+          els.combinedStoryboardImage.style.display = 'block';
+          els.combinedImagePlaceholder.style.display = 'none';
+          
+          els.btnDownloadCombined.disabled = false;
+          els.btnExportStoryboard.disabled = false;
+          showToast('Gambar infografis storyboard berhasil dibuat!', 'success');
+        } else {
+          const errorMsg = item.errorMessage || 'Proses render gambar di server Freebeat gagal.';
+          showToast(`Gagal generate gambar: ${errorMsg}`, 'error');
+          els.combinedImagePlaceholder.style.display = 'flex';
+          els.combinedStoryboardImage.style.display = 'none';
+        }
+      } else {
+        els.combinedLoaderText.textContent = `Rendering gambar... Status: ${status.toUpperCase()}`;
+      }
+    } catch (err) {
+      console.error('Image polling error:', err);
+    }
+  }, 5000);
 }
 
 // Download action for combined image
@@ -1505,6 +1687,172 @@ function clearCharacterImage() {
   els.btnClearCharacter.style.display = 'none';
   els.btnUploadCharacter.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Upload Foto Karakter';
   showToast('Gambar referensi karakter dihapus.', 'info');
+}
+
+// Video Mode Selection toggler
+function handleSelectVideoMode() {
+  const mode = parseInt(els.freebeatGenerationType.value, 10) || 1;
+  state.videoGenerationType = mode;
+  
+  if (mode === 1) {
+    els.freebeatI2vInputs.style.display = 'none';
+    els.freebeatV2vInputs.style.display = 'none';
+  } else if (mode === 2) {
+    els.freebeatI2vInputs.style.display = 'block';
+    els.freebeatV2vInputs.style.display = 'none';
+  } else if (mode === 3) {
+    els.freebeatI2vInputs.style.display = 'none';
+    els.freebeatV2vInputs.style.display = 'block';
+  }
+}
+
+// I2V Image Handlers
+function handleVStartImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  state.vStartFile = file;
+  state.vStartImage = '';
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    els.vStartPreviewImg.src = e.target.result;
+    els.vStartPreviewContainer.style.display = 'flex';
+    els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Awal';
+    showToast('Gambar awal berhasil dimuat secara lokal!', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleUseStoryboardStart() {
+  if (!state.combinedImage) {
+    showToast('Gambar storyboard kosong! Silakan generate storyboard terlebih dahulu.', 'error');
+    return;
+  }
+  state.vStartFile = null;
+  state.vStartImage = state.combinedImage;
+  
+  els.vStartPreviewImg.src = state.combinedImage;
+  els.vStartPreviewContainer.style.display = 'flex';
+  els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Gambar Awal';
+  showToast('Menggunakan gambar storyboard sebagai Gambar Awal!', 'success');
+}
+
+function handleVEndImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  state.vEndFile = file;
+  state.vEndImage = '';
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    els.vEndPreviewImg.src = e.target.result;
+    els.vEndPreviewContainer.style.display = 'flex';
+    els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Akhir';
+    showToast('Gambar akhir berhasil dimuat secara lokal!', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleUseStoryboardEnd() {
+  if (!state.combinedImage) {
+    showToast('Gambar storyboard kosong! Silakan generate storyboard terlebih dahulu.', 'error');
+    return;
+  }
+  state.vEndFile = null;
+  state.vEndImage = state.combinedImage;
+  
+  els.vEndPreviewImg.src = state.combinedImage;
+  els.vEndPreviewContainer.style.display = 'flex';
+  els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Upload Gambar Akhir';
+  showToast('Menggunakan gambar storyboard sebagai Gambar Akhir!', 'success');
+}
+
+// V2V Video Handler
+function handleVRefVideoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  state.vRefFile = file;
+  state.vRefVideo = '';
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    els.vRefPreviewVideo.src = e.target.result;
+    els.vRefPreviewContainer.style.display = 'flex';
+    els.btnUploadVRef.innerHTML = '<i class="fa-solid fa-video"></i> Ganti Video Referensi';
+    showToast('Video referensi berhasil dimuat secara lokal!', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Upload file to Freebeat's S3 bucket using presigned URLs
+async function uploadFileToFreebeat(file, keyPrefix = 'agent/character') {
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (!activeKey) {
+    throw new Error('API Key Freebeat tidak ditemukan. Silakan pilih API key terlebih dahulu.');
+  }
+
+  const ext = file.name.split('.').pop() || 'png';
+  const fileName = file.name;
+  const key = `${keyPrefix}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const bucketName = "freebeat-static";
+
+  // 1. Get Presigned URL
+  const response = await fetch('/proxy', {
+    method: 'POST',
+    headers: {
+      'x-target-url': 'https://api.freebeatfit.com/v1/mcp/agent/genUploadSignUrl',
+      'Authorization': activeKey.id,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ reqList: [{ key, fileName, bucketName }] })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gagal membuat upload URL. HTTP status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.code !== 0 || !data.data || !data.data.list || data.data.list.length === 0) {
+    throw new Error(data.msg || 'Gagal membuat upload URL dari Freebeat API.');
+  }
+
+  const { signURL, finalStaticUrl } = data.data.list[0];
+
+  // 2. Upload file to presigned URL
+  const uploadHeaders = {
+    'Content-Type': file.type
+  };
+  
+  const parsedUrl = new URL(signURL);
+  const signedHeaders = parsedUrl.searchParams.get("X-Amz-SignedHeaders")?.split(";").map(h => h.trim().toLowerCase()) ?? [];
+  if (signedHeaders.includes("x-amz-acl")) {
+    uploadHeaders["x-amz-acl"] = "public-read";
+  }
+
+  const uploadRes = await fetch(signURL, {
+    method: 'PUT',
+    headers: uploadHeaders,
+    body: file
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error(`Upload file ke S3 gagal. HTTP status: ${uploadRes.status}`);
+  }
+
+  return finalStaticUrl;
+}
+
+// Convert Base64 dataURL to Blob for S3 upload
+function dataURLtoBlob(dataurl) {
+  var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+  while(n--){
+      u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], {type:mime});
 }
 
 // ----------------------------------------------------
@@ -1782,6 +2130,7 @@ async function handleGenerateFreebeatVideo() {
   const aspect_ratio = els.freebeatAspectRatio.value || '9:16';
   const generate_audio = els.freebeatGenerateAudio.checked;
   const audioValue = generate_audio ? 1 : 0;
+  const genType = state.videoGenerationType;
   
   const estimatedCost = getEstimatedCreditCost(modelId, duration, resolution);
   if (estimatedCost !== null && activeKey.balance !== null && activeKey.balance !== undefined && activeKey.balance < estimatedCost) {
@@ -1797,26 +2146,78 @@ async function handleGenerateFreebeatVideo() {
   els.btnGenerateFreebeatVideo.disabled = true;
   els.btnGenerateFreebeatVideo.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghubungi Video Studio...';
   
-  els.freebeatVideoLoaderText.textContent = 'Memulai antrean render Video Studio...';
-  
-  const requestBody = {
-    items: [
-      {
-        modelId: String(modelId),
-        generationType: 1,
-        prompt: prompt,
-        duration: duration,
-        resolution: resolution,
-        aspectRatio: aspect_ratio,
-        audio: audioValue,
-        generateAudio: audioValue,
-        watermark: false,
-        watermarkValue: 0
-      }
-    ]
-  };
-  
+  els.freebeatVideoLoaderText.textContent = 'Mempersiapkan render video...';
+
   try {
+    const itemData = {
+      modelId: String(modelId),
+      generationType: genType,
+      prompt: prompt,
+      duration: duration,
+      resolution: resolution,
+      aspectRatio: aspect_ratio,
+      audio: audioValue,
+      generateAudio: audioValue,
+      watermark: false,
+      watermarkValue: 0
+    };
+
+    // Handle reference assets uploads and payload parameters based on video mode
+    if (genType === 2) {
+      // Image-to-Video
+      const startRef = state.vStartFile || state.vStartImage;
+      const endRef = state.vEndFile || state.vEndImage;
+      if (!startRef || !endRef) {
+        throw new Error('Gambar Awal dan Gambar Akhir wajib ditentukan untuk mode Image-to-Video.');
+      }
+
+      let startUrl = '';
+      if (state.vStartFile) {
+        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+        startUrl = await uploadFileToFreebeat(state.vStartFile, 'agent/character');
+      } else if (state.vStartImage.startsWith('data:image/')) {
+        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Awal ke Freebeat...';
+        const blob = dataURLtoBlob(state.vStartImage);
+        const file = new File([blob], 'start_frame.png', { type: blob.type });
+        startUrl = await uploadFileToFreebeat(file, 'agent/character');
+      } else {
+        startUrl = state.vStartImage;
+      }
+
+      let endUrl = '';
+      if (state.vEndFile) {
+        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+        endUrl = await uploadFileToFreebeat(state.vEndFile, 'agent/character');
+      } else if (state.vEndImage.startsWith('data:image/')) {
+        els.freebeatVideoLoaderText.textContent = 'Mengunggah Gambar Akhir ke Freebeat...';
+        const blob = dataURLtoBlob(state.vEndImage);
+        const file = new File([blob], 'end_frame.png', { type: blob.type });
+        endUrl = await uploadFileToFreebeat(file, 'agent/character');
+      } else {
+        endUrl = state.vEndImage;
+      }
+
+      itemData.images = [startUrl, endUrl];
+    } else if (genType === 3) {
+      // Video-to-Video
+      let videoUrl = '';
+      if (state.vRefFile) {
+        els.freebeatVideoLoaderText.textContent = 'Mengunggah Video Referensi ke Freebeat...';
+        videoUrl = await uploadFileToFreebeat(state.vRefFile, 'agent/video');
+      } else {
+        videoUrl = els.freebeatVRefUrl.value.trim();
+      }
+
+      if (!videoUrl) {
+        throw new Error('Video referensi wajib diunggah atau berupa URL untuk mode Video-to-Video.');
+      }
+
+      itemData.video = videoUrl;
+      itemData.videos = [videoUrl];
+    }
+
+    els.freebeatVideoLoaderText.textContent = 'Memulai antrean render Video Studio...';
+
     const response = await fetch('/proxy', {
       method: 'POST',
       headers: {
@@ -1824,7 +2225,7 @@ async function handleGenerateFreebeatVideo() {
         'Authorization': activeKey.id, // Pass key ID, resolved transparently by the server!
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({ items: [itemData] })
     });
     
     if (!response.ok) {

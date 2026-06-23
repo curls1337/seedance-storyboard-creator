@@ -347,6 +347,80 @@
                 Pilih model video dan konfigurasikan setelan untuk me-render gambar storyboard di atas menjadi video real-time menggunakan Freebeat Video Studio API.
               </p>
               
+              <!-- Video Generation Mode Selector -->
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="freebeat-generation-type">Mode Video</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-video input-icon"></i>
+                  <select id="freebeat-generation-type" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
+                    <option value="1" selected>Text-to-Video (T2V)</option>
+                    <option value="2">Image-to-Video (I2V)</option>
+                    <option value="3">Video-to-Video (V2V)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Conditionally Visible Inputs for Image-to-Video (I2V) -->
+              <div id="freebeat-i2v-inputs" style="display: none; margin-bottom: 16px; border: 1px dashed var(--border-color); padding: 12px; border-radius: var(--radius-md); background: var(--bg-darker);">
+                <label style="font-size: 12px; font-weight: 600; color: var(--accent-gold); display: block; margin-bottom: 8px;">Referensi Gambar (Image-to-Video)</label>
+                
+                <!-- Start Image Frame -->
+                <div class="form-group" style="margin-bottom: 12px;">
+                  <label style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--text-secondary);">Gambar Awal (Start Frame)</label>
+                  <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                    <button class="btn btn-secondary" id="btn-upload-v-start" style="margin-top: 0; flex: 1; font-size: 11px; padding: 6px 10px;" type="button">
+                      <i class="fa-solid fa-image"></i> Upload Gambar Awal
+                    </button>
+                    <button class="btn btn-secondary" id="btn-use-storyboard-start" style="margin-top: 0; font-size: 11px; padding: 6px 10px; border-color: var(--accent-gold); color: var(--accent-gold);" type="button" title="Gunakan Gambar Storyboard">
+                      Gunakan Storyboard
+                    </button>
+                  </div>
+                  <input type="file" id="freebeat-v-start-input" style="display: none;" accept="image/*">
+                  <div id="v-start-preview-container" style="display: none; margin-top: 6px; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px; align-items: center; justify-content: center; background: var(--bg-secondary);">
+                    <img id="v-start-preview-img" style="max-height: 80px; max-width: 100%; object-fit: contain;">
+                  </div>
+                </div>
+
+                <!-- End Image Frame -->
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--text-secondary);">Gambar Akhir (End Frame)</label>
+                  <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                    <button class="btn btn-secondary" id="btn-upload-v-end" style="margin-top: 0; flex: 1; font-size: 11px; padding: 6px 10px;" type="button">
+                      <i class="fa-solid fa-image"></i> Upload Gambar Akhir
+                    </button>
+                    <button class="btn btn-secondary" id="btn-use-storyboard-end" style="margin-top: 0; font-size: 11px; padding: 6px 10px; border-color: var(--accent-gold); color: var(--accent-gold);" type="button" title="Gunakan Gambar Storyboard">
+                      Gunakan Storyboard
+                    </button>
+                  </div>
+                  <input type="file" id="freebeat-v-end-input" style="display: none;" accept="image/*">
+                  <div id="v-end-preview-container" style="display: none; margin-top: 6px; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px; align-items: center; justify-content: center; background: var(--bg-secondary);">
+                    <img id="v-end-preview-img" style="max-height: 80px; max-width: 100%; object-fit: contain;">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Conditionally Visible Inputs for Video-to-Video (V2V) -->
+              <div id="freebeat-v2v-inputs" style="display: none; margin-bottom: 16px; border: 1px dashed var(--border-color); padding: 12px; border-radius: var(--radius-md); background: var(--bg-darker);">
+                <label style="font-size: 12px; font-weight: 600; color: var(--accent-gold); display: block; margin-bottom: 8px;">Referensi Video (Video-to-Video)</label>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--text-secondary);">Upload Video Referensi atau Masukkan URL</label>
+                  <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 8px;">
+                    <button class="btn btn-secondary" id="btn-upload-v-ref" style="margin-top: 0; flex: 1; font-size: 11px; padding: 6px 10px;" type="button">
+                      <i class="fa-solid fa-video"></i> Upload File Video
+                    </button>
+                  </div>
+                  <input type="file" id="freebeat-v-ref-input" style="display: none;" accept="video/*">
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-link input-icon" style="font-size: 12px; top: 13px;"></i>
+                    <input type="text" id="freebeat-v-ref-url" placeholder="https://cdn.example.com/video.mp4" style="padding-left: 36px; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 32px; width: 100%; font-size: 12px;">
+                  </div>
+                  <div id="v-ref-preview-container" style="display: none; margin-top: 8px; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px; align-items: center; justify-content: center; background: var(--bg-secondary);">
+                    <video id="v-ref-preview-video" style="max-height: 100px; max-width: 100%;" controls></video>
+                  </div>
+                </div>
+              </div>
+
+              
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div class="form-group">
                   <label for="freebeat-model-select">Model Video</label>
@@ -628,7 +702,11 @@
                 <div class="input-wrapper">
                   <i class="fa-solid fa-image input-icon"></i>
                   <select id="image-model-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%;">
-                    <option value="gemini-3.1-flash-image" selected>gemini-3.1-flash-image (Aktif)</option>
+                    <option value="80">Nano Banana 2 (80)</option>
+                    <option value="64">Nano Banana Pro (64)</option>
+                    <option value="99">Wan V2.7 Image (99)</option>
+                    <option value="100">Wan V2.7 Pro Image (100)</option>
+                    <option value="108" selected>GPT-Image 2 (108)</option>
                   </select>
                 </div>
               </div>

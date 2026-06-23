@@ -125,6 +125,24 @@
           </div>
         </section>
 
+        <!-- Storyboard Mode Selector -->
+        <section class="sidebar-section">
+          <div class="section-title">
+            <span>Mode Storyboard</span>
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div class="form-group">
+            <label for="storyboard-mode-select">Pilih Mode Kerja</label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-layer-group input-icon"></i>
+              <select id="storyboard-mode-select">
+                <option value="grid" selected>Grid Gabungan (Single Image)</option>
+                <option value="per-frame">Per Frame (Individual Images)</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
         <!-- Custom AI Storyboard Maker -->
         <section class="sidebar-section">
           <div class="section-title">
@@ -258,121 +276,140 @@
           <!-- Storyboard Master Scroll Wrapper (Hidden by default) -->
           <div class="storyboard-wrapper" id="storyboard-preview-wrapper" style="display: none; flex-direction: column; max-width: 1000px; margin: 0 auto; gap: 24px;">
             
-            <!-- 1. The Combined Storyboard Image Display Card -->
-            <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
-              <div class="section-title">
-                <span id="storyboard-display-title" style="font-size: 18px; color: var(--accent-gold); text-transform: uppercase;">Indomie Nyemek Viral</span>
-                <span id="storyboard-display-meta" style="font-size: 12px; color: var(--text-secondary); text-transform: none; letter-spacing: 0;">Infografis Gabungan (1 Gambar)</span>
-              </div>
-              
-              <!-- Combined Image Viewport -->
-              <div class="scene-image-container" id="combined-image-viewport" style="width: 100%; aspect-ratio: auto; min-height: 450px; background-color: var(--bg-darker); border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 15px; position: relative; padding: 16px;">
-                <div class="image-upload-placeholder" id="combined-image-placeholder" onclick="triggerCombinedUpload()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
-                  <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 40px; color: var(--accent-gold); margin-bottom: 4px;"></i>
-                  <span style="font-size: 14px; font-weight: 600;">Gambar Infografis Belum Dibuat</span>
-                  <span style="font-size: 11px; color: var(--text-muted);">Klik "Generate Gambar Storyboard" di bawah atau upload file manual</span>
+            <!-- Grid Mode Elements Wrapper -->
+            <div id="grid-mode-content" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+              <!-- 1. The Combined Storyboard Image Display Card -->
+              <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
+                <div class="section-title">
+                  <span id="storyboard-display-title" style="font-size: 18px; color: var(--accent-gold); text-transform: uppercase;">Indomie Nyemek Viral</span>
+                  <span id="storyboard-display-meta" style="font-size: 12px; color: var(--text-secondary); text-transform: none; letter-spacing: 0;">Infografis Gabungan (1 Gambar)</span>
                 </div>
                 
-                <!-- Container for holding one or two images -->
-                <div id="storyboard-images-container" style="display: none; width: 100%;">
-                  <div id="storyboard-images-grid" style="display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; align-items: center; justify-items: center;">
-                    <!-- Wrapper for Image 1 -->
-                    <div id="storyboard-img1-wrapper" style="position: relative; width: 100%;">
-                      <span id="lbl-storyboard-img1" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); color: var(--accent-gold); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; z-index: 10; border: 1px solid var(--accent-gold); display: none;">Gambar 1 / Start Frame</span>
-                      <img id="combined-storyboard-image" style="width: 100%; height: auto; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: block;" alt="Combined Storyboard Grid 1">
+                <!-- Combined Image Viewport -->
+                <div class="scene-image-container" id="combined-image-viewport" style="width: 100%; aspect-ratio: auto; min-height: 450px; background-color: var(--bg-darker); border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 15px; position: relative; padding: 16px;">
+                  <div class="image-upload-placeholder" id="combined-image-placeholder" onclick="triggerCombinedUpload()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 40px; color: var(--accent-gold); margin-bottom: 4px;"></i>
+                    <span style="font-size: 14px; font-weight: 600;">Gambar Infografis Belum Dibuat</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Klik "Generate Gambar Storyboard" di bawah atau upload file manual</span>
+                  </div>
+                  
+                  <!-- Container for holding one or two images -->
+                  <div id="storyboard-images-container" style="display: none; width: 100%;">
+                    <div id="storyboard-images-grid" style="display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; align-items: center; justify-items: center;">
+                      <!-- Wrapper for Image 1 -->
+                      <div id="storyboard-img1-wrapper" style="position: relative; width: 100%;">
+                        <span id="lbl-storyboard-img1" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); color: var(--accent-gold); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; z-index: 10; border: 1px solid var(--accent-gold); display: none;">Gambar 1 / Start Frame</span>
+                        <img id="combined-storyboard-image" style="width: 100%; height: auto; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: block;" alt="Combined Storyboard Grid 1">
+                      </div>
+                      <!-- Wrapper for Image 2 -->
+                      <div id="storyboard-img2-wrapper" style="position: relative; width: 100%; display: none;">
+                        <span style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); color: var(--accent-gold); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; z-index: 10; border: 1px solid var(--accent-gold);">Gambar 2 / End Frame</span>
+                        <img id="combined-storyboard-image-2" style="width: 100%; height: auto; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: block;" alt="Combined Storyboard Grid 2">
+                      </div>
                     </div>
-                    <!-- Wrapper for Image 2 -->
-                    <div id="storyboard-img2-wrapper" style="position: relative; width: 100%; display: none;">
-                      <span style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); color: var(--accent-gold); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; z-index: 10; border: 1px solid var(--accent-gold);">Gambar 2 / End Frame</span>
-                      <img id="combined-storyboard-image-2" style="width: 100%; height: auto; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: block;" alt="Combined Storyboard Grid 2">
-                    </div>
+                  </div>
+                  
+                  <!-- Loader inside image viewport -->
+                  <div class="image-loading-overlay" id="combined-image-loader" style="display: none;">
+                    <div class="spinner"></div>
+                    <div class="loading-text" id="combined-loader-text">Generating Storyboard Grid...</div>
                   </div>
                 </div>
                 
-                <!-- Loader inside image viewport -->
-                <div class="image-loading-overlay" id="combined-image-loader" style="display: none;">
-                  <div class="spinner"></div>
-                  <div class="loading-text" id="combined-loader-text">Generating Storyboard Grid...</div>
+                <!-- Actions for Combined Image -->
+                <div style="display: flex; gap: 12px; margin-top: 15px; justify-content: flex-end;">
+                  <button class="btn btn-secondary" id="btn-upload-combined" style="width: auto; margin-top: 0;" type="button">
+                    <i class="fa-solid fa-upload"></i> Upload PNG Manual
+                  </button>
+                  <button class="btn btn-primary" id="btn-download-combined" style="width: auto;" type="button" disabled>
+                    <i class="fa-solid fa-download"></i> Unduh Gambar (PNG)
+                  </button>
+                </div>
+                
+                <input type="file" id="combined-file-input" style="display: none;" accept="image/*">
+              </div>
+
+              <!-- 2. Master Storyboard Grid Prompt Editor Card -->
+              <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
+                <div class="section-title">
+                  <span>1. Prompt Untuk Membuat Gambar Storyboard (Grid Reference)</span>
+                  <i class="fa-solid fa-image"></i>
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                  Kirimkan prompt ini ke AI Image Generator untuk membuat **satu gambar infografis gabungan** di atas.
+                </p>
+                <div class="form-group">
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-align-left input-icon" style="top: 20px;"></i>
+                    <textarea id="master-grid-prompt" style="min-height: 120px; padding: 12px 12px 12px 36px; line-height: 1.5; font-family: monospace; font-size: 13px;" placeholder="Prompt grid image..."></textarea>
+                  </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                  <button class="btn btn-secondary" id="btn-copy-master-prompt" style="width: auto; margin-top: 0;" type="button">
+                    <i class="fa-solid fa-copy"></i> Salin Prompt Gambar
+                  </button>
+                  <button class="btn btn-primary" id="btn-generate-combined-image" style="width: auto;" type="button">
+                    <i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)
+                  </button>
+                </div>
+
+                <!-- Setelan Gambar (Model & Ukuran & Jumlah) -->
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="image-model-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Model Gambar</label>
+                    <div class="input-wrapper">
+                      <i class="fa-solid fa-robot input-icon" style="font-size: 12px; top: 14px;"></i>
+                      <select id="image-model-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
+                        <option value="80">Nano Banana 2 (80)</option>
+                        <option value="64">Nano Banana Pro (64)</option>
+                        <option value="99">Wan V2.7 Image (99)</option>
+                        <option value="100">Wan V2.7 Pro Image (100)</option>
+                        <option value="108" selected>GPT-Image 2 (108)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="image-size-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Ukuran Gambar</label>
+                    <div class="input-wrapper">
+                      <i class="fa-solid fa-crop input-icon" style="font-size: 12px; top: 14px;"></i>
+                      <select id="image-size-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
+                        <option value="1024x1024" selected>1:1 (1024x1024)</option>
+                        <option value="1024x576">16:9 (1024x576)</option>
+                        <option value="576x1024">9:16 (576x1024)</option>
+                        <option value="1024x768">4:3 (1024x768)</option>
+                        <option value="768x1024">3:4 (768x1024)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="image-count-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Jumlah Gambar</label>
+                    <div class="input-wrapper">
+                      <i class="fa-solid fa-images input-icon" style="font-size: 12px; top: 14px;"></i>
+                      <select id="image-count-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
+                        <option value="1" selected>1 Gambar (Standard)</option>
+                        <option value="2">2 Gambar (Untuk I2V)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <!-- Actions for Combined Image -->
-              <div style="display: flex; gap: 12px; margin-top: 15px; justify-content: flex-end;">
-                <button class="btn btn-secondary" id="btn-upload-combined" style="width: auto; margin-top: 0;" type="button">
-                  <i class="fa-solid fa-upload"></i> Upload PNG Manual
-                </button>
-                <button class="btn btn-primary" id="btn-download-combined" style="width: auto;" type="button" disabled>
-                  <i class="fa-solid fa-download"></i> Unduh Gambar (PNG)
-                </button>
-              </div>
-              
-              <input type="file" id="combined-file-input" style="display: none;" accept="image/*">
             </div>
 
-            <!-- 2. Master Storyboard Grid Prompt Editor Card -->
-            <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
-              <div class="section-title">
-                <span>1. Prompt Untuk Membuat Gambar Storyboard (Grid Reference)</span>
-                <i class="fa-solid fa-image"></i>
-              </div>
-              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
-                Kirimkan prompt ini ke AI Image Generator untuk membuat **satu gambar infografis gabungan** di atas.
-              </p>
-              <div class="form-group">
-                <div class="input-wrapper">
-                  <i class="fa-solid fa-align-left input-icon" style="top: 20px;"></i>
-                  <textarea id="master-grid-prompt" style="min-height: 120px; padding: 12px 12px 12px 36px; line-height: 1.5; font-family: monospace; font-size: 13px;" placeholder="Prompt grid image..."></textarea>
+            <!-- Per-Frame Mode Elements Wrapper -->
+            <div id="per-frame-mode-content" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+              <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
+                <div class="section-title">
+                  <span id="per-frame-display-title" style="font-size: 18px; color: var(--accent-gold); text-transform: uppercase;">Storyboard Per Frame</span>
+                  <span id="per-frame-display-meta" style="font-size: 12px; color: var(--text-secondary); text-transform: none; letter-spacing: 0;">Individual Scenes (1 Gambar per Frame)</span>
                 </div>
-              </div>
-              
-              <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button class="btn btn-secondary" id="btn-copy-master-prompt" style="width: auto; margin-top: 0;" type="button">
-                  <i class="fa-solid fa-copy"></i> Salin Prompt Gambar
-                </button>
-                <button class="btn btn-primary" id="btn-generate-combined-image" style="width: auto;" type="button">
-                  <i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)
-                </button>
-              </div>
-
-              <!-- Setelan Gambar (Model & Ukuran & Jumlah) -->
-              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="image-model-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Model Gambar</label>
-                  <div class="input-wrapper">
-                    <i class="fa-solid fa-robot input-icon" style="font-size: 12px; top: 14px;"></i>
-                    <select id="image-model-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
-                      <option value="80">Nano Banana 2 (80)</option>
-                      <option value="64">Nano Banana Pro (64)</option>
-                      <option value="99">Wan V2.7 Image (99)</option>
-                      <option value="100">Wan V2.7 Pro Image (100)</option>
-                      <option value="108" selected>GPT-Image 2 (108)</option>
-                    </select>
-                  </div>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="image-size-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Ukuran Gambar</label>
-                  <div class="input-wrapper">
-                    <i class="fa-solid fa-crop input-icon" style="font-size: 12px; top: 14px;"></i>
-                    <select id="image-size-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
-                      <option value="1024x1024" selected>1:1 (1024x1024)</option>
-                      <option value="1024x576">16:9 (1024x576)</option>
-                      <option value="576x1024">9:16 (576x1024)</option>
-                      <option value="1024x768">4:3 (1024x768)</option>
-                      <option value="768x1024">3:4 (768x1024)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="image-count-select" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Jumlah Gambar</label>
-                  <div class="input-wrapper">
-                    <i class="fa-solid fa-images input-icon" style="font-size: 12px; top: 14px;"></i>
-                    <select id="image-count-select" style="padding-left: 36px; background-color: var(--bg-darker); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); height: 40px; width: 100%; font-size: 12px;">
-                      <option value="1" selected>1 Gambar (Standard)</option>
-                      <option value="2">2 Gambar (Untuk I2V)</option>
-                    </select>
-                  </div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
+                  Di bawah adalah scene individual storyboard. Anda dapat men-generate atau meng-upload gambar untuk masing-masing scene secara terpisah untuk membuat video.
+                </p>
+                <div id="per-frame-scenes-list" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+                  <!-- Scene Cards are populated dynamically here -->
                 </div>
               </div>
             </div>
@@ -380,7 +417,7 @@
             <!-- 3. Master Seedance Video Prompt Card -->
             <div class="sidebar-section" style="width: 100%; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); margin-bottom: 0; border: 1px solid var(--border-color);">
               <div class="section-title">
-                <span>2. Prompt Tunggal Untuk Dikirim Ke Seedance (Video Generator)</span>
+                <span>2. Prompt Video untuk Model: <strong id="video-prompt-model-badge" style="color: var(--accent-gold);">Pixverse V6</strong></span>
                 <i class="fa-solid fa-video"></i>
               </div>
               <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">

@@ -33,7 +33,12 @@ const state = {
   vRefVideo: '',
   videoGenerationType: 1,
   freebeatImageIntervals: {}, // { batchId: intervalId }
-  latestVideoBatchId: ''
+  latestVideoBatchId: '',
+
+  // New Per-Frame and Model-Specific State
+  storyboardMode: 'grid', // 'grid' or 'per-frame'
+  videoPrompts: {}, // { [modelId]: promptText }
+  scenes: [] // [{ scene_number: 1, title: 'Finished Dish', image_prompt: '...', video_prompt: '...', imageUrl: '', isGenerating: false, batchId: '' }]
 };
 
 // Freebeat Video Studio Model Configurations (Duration, Resolution & Cost Mapping)
@@ -313,7 +318,14 @@ const els = {
   btnClearHistoryTab: document.getElementById('btn-clear-history-tab'),
 
   // Session total credits
-  sessionTotalCredits: document.getElementById('session-total-credits')
+  sessionTotalCredits: document.getElementById('session-total-credits'),
+
+  // New Storyboard Mode Elements
+  storyboardModeSelect: document.getElementById('storyboard-mode-select'),
+  gridModeContent: document.getElementById('grid-mode-content'),
+  perFrameModeContent: document.getElementById('per-frame-mode-content'),
+  perFrameScenesList: document.getElementById('per-frame-scenes-list'),
+  videoPromptModelBadge: document.getElementById('video-prompt-model-badge')
 };
 
 // Update user total credits in sidebar
@@ -517,6 +529,16 @@ function setupEventListeners() {
     state.sceneCount = parseInt(els.sceneCount.value, 10);
   });
 
+  els.storyboardModeSelect.addEventListener('change', handleStoryboardModeChange);
+  
+  els.masterSeedancePrompt.addEventListener('input', () => {
+    const modelId = els.freebeatModelSelect.value;
+    if (modelId) {
+      state.videoPrompts[modelId] = els.masterSeedancePrompt.value;
+      state.masterSeedancePrompt = els.masterSeedancePrompt.value;
+    }
+  });
+
   els.btnGenerateStoryboard.addEventListener('click', generateStoryboardWithAI);
   els.btnClearStoryboard.addEventListener('click', clearStoryboard);
   els.btnOneClickFlow.addEventListener('click', runOneClickFlow);
@@ -582,7 +604,10 @@ function setupEventListeners() {
   els.freebeatVRefInput.addEventListener('change', handleVRefVideoUpload);
   
   // Dynamic duration and cost calculation listeners
-  els.freebeatModelSelect.addEventListener('change', updateDurationOptionsAndCost);
+  els.freebeatModelSelect.addEventListener('change', () => {
+    updateDurationOptionsAndCost();
+    handleVideoModelChange(els.freebeatModelSelect.value);
+  });
   els.freebeatDuration.addEventListener('change', updateEstimatedCostUI);
   els.freebeatResolution.addEventListener('change', updateEstimatedCostUI);
 
@@ -1241,6 +1266,12 @@ function loadTemplate(templateId) {
   els.masterGridPrompt.value = state.masterGridPrompt;
   els.masterSeedancePrompt.value = state.masterSeedancePrompt;
   
+  // Sync to model-specific prompt
+  const modelId = els.freebeatModelSelect.value;
+  if (modelId) {
+    state.videoPrompts[modelId] = state.masterSeedancePrompt;
+  }
+  
   // Adjust scenes count in slider if preset has standard scenes
   let defaultCount = 11;
   if (templateId === 'nasi-goreng') defaultCount = 7;
@@ -1251,6 +1282,9 @@ function loadTemplate(templateId) {
   els.sceneCount.value = defaultCount;
   els.sceneCountVal.textContent = defaultCount;
   
+  // Load per-frame scenes
+  state.scenes = getScenesForTemplate(templateId);
+  
   showToast(`Template "${tpl.title}" berhasil dimuat!`, 'success');
   
   // Show UI elements
@@ -1258,7 +1292,13 @@ function loadTemplate(templateId) {
   els.storyboardPreviewWrapper.style.display = 'flex';
   els.btnClearStoryboard.style.display = 'flex';
   els.storyboardDisplayTitle.textContent = state.storyboardTitle;
-  els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${defaultCount} Langkah`;
+  
+  if (state.storyboardMode === 'per-frame') {
+    renderPerFrameScenes();
+    els.storyboardDisplayMeta.textContent = `Per Frame • ${state.scenes.length} Langkah`;
+  } else {
+    els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${defaultCount} Langkah`;
+  }
   
   // Reset select option
   els.templateSelect.value = templateId;
@@ -1335,6 +1375,13 @@ function clearStoryboard() {
   els.btnDownloadCombined.disabled = true;
   els.btnExportStoryboard.disabled = true;
   
+  // Reset per frame scenes and model prompts
+  state.scenes = [];
+  state.videoPrompts = {};
+  if (els.perFrameScenesList) {
+    els.perFrameScenesList.innerHTML = '';
+  }
+  
   // Hide video preview/status if open
   els.freebeatVideoStatusContainer.style.display = 'none';
   els.freebeatGeneratedVideo.src = '';
@@ -1384,7 +1431,30 @@ async function generateStoryboardWithAI() {
   els.btnGenerateStoryboard.disabled = true;
   els.btnGenerateStoryboard.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghubungkan AI...';
   
-  const systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
+  let systemPrompt = '';
+  if (state.storyboardMode === 'per-frame') {
+    systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
+Your task is to take a cooking recipe or video concept and design a step-by-step storyboard consisting of ${state.sceneCount} sequential scenes.
+For each scene, you must design:
+1. An image prompt ("image_prompt") in English that will generate a clean, high-quality, professional food/beverage photography image representing that scene. The image MUST contain NO text overlays, NO borders, and NO grid lines.
+2. A video prompt ("video_prompt") in English that describes the animation, camera movement, and detail for that specific scene starting from the generated image. Since this is for a single image to video, it should describe the motion starting from the image itself.
+3. A title ("title") in Indonesian representing the scene action (e.g. "Finished Dish", "Bahan-Bahan", "Iris Bawang").
+
+Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSON, or wrap it inside clean markdown JSON):
+{
+  "title": "NAMA RESEP / KONSEP",
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "...",
+      "image_prompt": "...",
+      "video_prompt": "..."
+    },
+    ...
+  ]
+}`;
+  } else {
+    systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
 Your task is to take a cooking recipe or video concept and design:
 1. A master grid prompt ("master_grid_prompt") in English that will generate a single vertical storyboard grid image consisting of ${state.sceneCount} sequential vertical panels. The image should be formatted exactly like a cooking video recipe infographic. Each panel must depict a step. Instruct the image generator to draw "SCENE X" (yellow bold text) on the top-left of each panel, timestamps (white text) on the top-right, and a solid black footer directly below each panel containing a bold yellow/gold title in Indonesian and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. Use a dark background and professional food photography style.
 2. A single master Seedance prompt ("master_seedance_prompt") in English. This is a unified prompt that will be sent to Seedance along with the uploaded grid image to animate the storyboard. It must describe the chronological animation, camera movement, and visual details for each of the ${state.sceneCount} panels sequentially, referencing the timestamps.
@@ -1396,6 +1466,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
   "master_grid_prompt": "...",
   "master_seedance_prompt": "..."
 }`;
+  }
 
   try {
     const messages = [
@@ -1458,29 +1529,70 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     const parsedData = JSON.parse(content);
     
     state.storyboardTitle = parsedData.title || 'Custom Recipe Storyboard';
-    state.masterGridPrompt = parsedData.master_grid_prompt || '';
-    state.masterSeedancePrompt = parsedData.master_seedance_prompt || '';
     
-    // Set prompt input values
-    els.masterGridPrompt.value = state.masterGridPrompt;
-    els.masterSeedancePrompt.value = state.masterSeedancePrompt;
-    
-    showToast('Storyboard AI berhasil dibuat!', 'success');
-    
-    // Show Preview Wrapper
-    els.storyboardEmptyState.style.display = 'none';
-    els.storyboardPreviewWrapper.style.display = 'flex';
-    els.btnClearStoryboard.style.display = 'flex';
-    els.storyboardDisplayTitle.textContent = state.storyboardTitle;
-    els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${state.sceneCount} Langkah`;
-    
-    // Reset image placeholder
-    state.combinedImage = '';
-    els.combinedStoryboardImage.src = '';
-    els.combinedStoryboardImage.style.display = 'none';
-    els.combinedImagePlaceholder.style.display = 'flex';
-    els.btnDownloadCombined.disabled = true;
-    els.btnExportStoryboard.disabled = true;
+    if (state.storyboardMode === 'per-frame') {
+      state.scenes = (parsedData.scenes || []).map(scene => ({
+        scene_number: scene.scene_number,
+        title: scene.title || `Scene ${scene.scene_number}`,
+        image_prompt: scene.image_prompt || '',
+        video_prompt: scene.video_prompt || '',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      }));
+      
+      // Also generate a combined master Seedance prompt from all individual video prompts
+      const combinedVideoPrompt = state.scenes.map(s => `Scene ${s.scene_number}: ${s.video_prompt}`).join('\n');
+      state.masterSeedancePrompt = combinedVideoPrompt;
+      els.masterSeedancePrompt.value = combinedVideoPrompt;
+      
+      // Update prompt for current model
+      const modelId = els.freebeatModelSelect.value;
+      if (modelId) {
+        state.videoPrompts[modelId] = combinedVideoPrompt;
+      }
+      
+      renderPerFrameScenes();
+      
+      showToast('Storyboard AI berhasil dibuat (Mode Per Frame)!', 'success');
+      
+      // Show Preview Wrapper
+      els.storyboardEmptyState.style.display = 'none';
+      els.storyboardPreviewWrapper.style.display = 'flex';
+      els.btnClearStoryboard.style.display = 'flex';
+      els.storyboardDisplayTitle.textContent = state.storyboardTitle;
+      els.storyboardDisplayMeta.textContent = `Per Frame • ${state.scenes.length} Langkah`;
+    } else {
+      state.masterGridPrompt = parsedData.master_grid_prompt || '';
+      state.masterSeedancePrompt = parsedData.master_seedance_prompt || '';
+      
+      // Set prompt input values
+      els.masterGridPrompt.value = state.masterGridPrompt;
+      els.masterSeedancePrompt.value = state.masterSeedancePrompt;
+      
+      // Update prompt for current model
+      const modelId = els.freebeatModelSelect.value;
+      if (modelId) {
+        state.videoPrompts[modelId] = state.masterSeedancePrompt;
+      }
+      
+      showToast('Storyboard AI berhasil dibuat!', 'success');
+      
+      // Show Preview Wrapper
+      els.storyboardEmptyState.style.display = 'none';
+      els.storyboardPreviewWrapper.style.display = 'flex';
+      els.btnClearStoryboard.style.display = 'flex';
+      els.storyboardDisplayTitle.textContent = state.storyboardTitle;
+      els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${state.sceneCount} Langkah`;
+      
+      // Reset image placeholder
+      state.combinedImage = '';
+      els.combinedStoryboardImage.src = '';
+      els.combinedStoryboardImage.style.display = 'none';
+      els.combinedImagePlaceholder.style.display = 'flex';
+      els.btnDownloadCombined.disabled = true;
+      els.btnExportStoryboard.disabled = true;
+    }
     
   } catch (error) {
     console.error('LLM generation error:', error);
@@ -2152,6 +2264,7 @@ function updateModelOptions() {
   }
   
   updateDurationOptionsAndCost();
+  handleVideoModelChange(els.freebeatModelSelect.value);
 }
 
 // Dynamic Duration, Resolution and Credit Cost Auto-detection
@@ -2823,14 +2936,662 @@ function showFreebeatVideoError(errorMsg) {
 function downloadFreebeatVideo() {
   const url = els.freebeatGeneratedVideo.src;
   if (!url) return;
+  const safeTitle = (state.storyboardTitle || 'video').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  downloadFileFromUrl(url, `video_${safeTitle}.mp4`);
+}
+
+async function downloadFileFromUrl(url, filename) {
+  if (!url) return;
+  showToast('Mempersiapkan unduhan file...', 'info');
+  try {
+    let response;
+    try {
+      response = await fetch(url);
+    } catch (corsErr) {
+      // Fallback to proxy
+      response = await fetch('/proxy', {
+        headers: {
+          'x-target-url': url
+        }
+      });
+    }
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    showToast('File berhasil diunduh!', 'success');
+  } catch (error) {
+    console.error('Download failed:', error);
+    window.open(url, '_blank');
+    showToast('Gagal download otomatis, membuka di tab baru.', 'warning');
+  }
+}
+
+function handleVideoModelChange(modelId) {
+  if (!modelId) return;
   
-  const link = document.createElement('a');
-  const safeTitle = state.storyboardTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  link.download = `video_${safeTitle}.mp4`;
-  link.href = url;
-  link.target = '_blank';
-  link.click();
-  showToast('Mengunduh video...', 'success');
+  // Update badge in prompt editor
+  if (els.videoPromptModelBadge) {
+    const displayName = getModelDisplayName(modelId);
+    els.videoPromptModelBadge.textContent = displayName;
+  }
+  
+  // Load prompt for this model from state
+  if (state.videoPrompts[modelId] !== undefined) {
+    els.masterSeedancePrompt.value = state.videoPrompts[modelId];
+    state.masterSeedancePrompt = state.videoPrompts[modelId];
+  } else {
+    // If not defined, copy from the current textarea value to initialize it
+    state.videoPrompts[modelId] = els.masterSeedancePrompt.value;
+  }
+}
+
+function handleStoryboardModeChange() {
+  const mode = els.storyboardModeSelect.value;
+  state.storyboardMode = mode;
+  
+  if (mode === 'grid') {
+    els.gridModeContent.style.display = 'flex';
+    els.perFrameModeContent.style.display = 'none';
+    
+    // Update display title and meta
+    els.storyboardDisplayTitle.textContent = state.storyboardTitle || 'Indomie Nyemek Viral';
+    els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${state.sceneCount} Langkah`;
+  } else {
+    els.gridModeContent.style.display = 'none';
+    els.perFrameModeContent.style.display = 'flex';
+    
+    // If state.scenes is empty but we have an active template, load the scenes for that template
+    if ((!state.scenes || state.scenes.length === 0) && els.templateSelect.value) {
+      state.scenes = getScenesForTemplate(els.templateSelect.value);
+    }
+    
+    // Render per frame scene cards from state.scenes
+    renderPerFrameScenes();
+    if (state.scenes && state.scenes.length > 0) {
+      els.storyboardDisplayMeta.textContent = `Per Frame • ${state.scenes.length} Langkah`;
+    }
+  }
+}
+
+// Helper to pre-populate storyboard template scenes for per-frame mode
+function getScenesForTemplate(templateId) {
+  if (templateId === 'indomie-nyemek') {
+    return [
+      {
+        scene_number: 1,
+        title: 'Finished Dish (Hero Shot)',
+        image_prompt: 'A close-up shot of a finished Indomie Nyemek dish in a bowl, steam rising, with a runny egg yolk on top. Professional food photography style, dark background.',
+        video_prompt: 'At the very beginning (0-1s), start directly with a clean, full-screen cinematic shot of the finished Indomie Nyemek, showing steam rising and the runny yolk of the egg, with absolutely no text or borders visible.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 2,
+        title: 'Raw Ingredients',
+        image_prompt: 'Raw ingredients for Indomie Nyemek including noodle packet, red chilis, raw eggs, and garlic arranged on a rustic wooden table. Professional food photography.',
+        video_prompt: 'Scene 2 (1-2s): Smoothly transition to show the raw ingredients (noodle packet, chilis, egg, garlic) arranged on a rustic wooden table, camera slowly zooming out.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 3,
+        title: 'Slicing Garlic & Chilis',
+        image_prompt: 'A close-up shot of hands slicing garlic and red chilis on a wooden cutting board with a kitchen knife. Slices of chilis scattered. Food prep photography.',
+        video_prompt: 'Scene 3 (2-3s): Slicing garlic and red chilis on a wooden cutting board with a kitchen knife.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 4,
+        title: 'Sautéing Chilis & Garlic',
+        image_prompt: 'Sautéing sliced chilis and garlic in hot cooking oil in a pan, sizzling. Slices of garlic and red chili visible. Action food photography.',
+        video_prompt: 'Scene 4 (3-4s): Sautéing sliced chilis and garlic in hot cooking oil in a pan, sizzling with light steam.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 5,
+        title: 'Pouring Water',
+        image_prompt: 'Pouring water into a frying pan containing sautéed chilis and garlic, creating dramatic steam, splashes and bubbles. Action food photography.',
+        video_prompt: 'Scene 5 (4-6s): Pouring water into the frying pan, causing dramatic steam and bubbles.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 6,
+        title: 'Adding Noodles',
+        image_prompt: 'Placing a dry instant noodle block into the boiling spicy red broth in a frying pan. Sizzling and steam. Food photography.',
+        video_prompt: 'Scene 6 (6-7s): Placing a noodle block into the boiling spicy broth.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 7,
+        title: 'Adding Raw Egg',
+        image_prompt: 'Cracking a raw egg into the boiling noodles in the pan, yolk remains intact and glossy. Steam rising. Action food photography.',
+        video_prompt: 'Scene 7 (7-9s): Cracking a raw egg into the boiling noodles, with the yolk intact.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 8,
+        title: 'Adding Seasoning',
+        image_prompt: 'Pouring instant noodle seasoning powder and chili oil from the plastic sachet onto the boiling noodles in the pan. Action food photography.',
+        video_prompt: 'Scene 8 (9-10s): Pouring seasoning powder and chili oil from the sachet onto the noodles.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 9,
+        title: 'Stirring Noodles',
+        image_prompt: 'Stirring noodles with a wooden spoon in a pan as the sauce thickens into a rich, glossy nyemek texture. Steam rising. Action food photography.',
+        video_prompt: 'Scene 9 (10-12s): Stirring the noodles with a wooden spoon as the sauce thickens into a rich "nyemek" texture.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 10,
+        title: 'Sprinkling Green Onions',
+        image_prompt: 'Sprinkling freshly chopped green onions on top of the cooked noodles in the pan, steam rising. Close-up action food photography.',
+        video_prompt: 'Scene 10 (12-14s): Sprinkling fresh green onions on top of the cooked noodles, steam rising.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 11,
+        title: 'Lifting Noodles',
+        image_prompt: 'Lifting a mouthful of Indomie Nyemek noodles with wooden chopsticks, glossy sauce dripping in slow motion. Close-up food photography.',
+        video_prompt: 'Scene 11 (14-15s): Lifting a mouthful of noodles with chopsticks, capturing the glossy sauce dripping in slow motion.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      }
+    ];
+  } else if (templateId === 'nasi-goreng') {
+    return [
+      {
+        scene_number: 1,
+        title: 'Nasi Goreng Plated',
+        image_prompt: 'Nasi Goreng Spesial served on a plate with a fried egg, cucumber slices, and crackers on a rustic wooden table. Steam rising. Professional food photography.',
+        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of a hot plate of Nasi Goreng Spesial on a rustic table, showing steam rising from the egg yolk, with absolutely no text or borders visible.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 2,
+        title: 'Raw Spices',
+        image_prompt: 'Raw shallots, garlic, and red chilis arranged on a stone mortar and pestle. Professional food ingredient photography.',
+        video_prompt: 'Scene 2 (2-4s): Smoothly transition to show the fresh shallots, garlic, and chilis arranged on a stone mortar and pestle.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 3,
+        title: 'Sautéing Ground Spices',
+        image_prompt: 'Sautéing ground spice paste in hot oil in a wok, with a spatula stirring the paste. Sizzling and steam. Action food photography.',
+        video_prompt: 'Scene 3 (4-6s): Sautéing the ground spice paste in hot oil in a wok, with spatula stirring the paste.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 4,
+        title: 'Scrambling Egg in Wok',
+        image_prompt: 'Cracking and scrambling an egg inside a wok with sizzling ground spices, steam rising. Action food photography.',
+        video_prompt: 'Scene 4 (6-8s): Cracking and scrambling an egg into the sizzling spices.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 5,
+        title: 'Adding Rice',
+        image_prompt: 'Adding cold white cooked rice into the wok with scrambled egg and spices, steam rising. Action food photography.',
+        video_prompt: 'Scene 5 (8-10s): Adding cold white rice into the wok, showing steam rising.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 6,
+        title: 'Drizzling Sweet Soy Sauce',
+        image_prompt: 'Drizzling sweet soy sauce (kecap manis) over the rice in a wok and stirring. Glossy texture. Action food photography.',
+        video_prompt: 'Scene 6 (10-12s): Drizzling sweet soy sauce (kecap manis) over the rice and stirring.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 7,
+        title: 'Plating and Shallots',
+        image_prompt: 'Plating the Nasi Goreng on a dish and sprinkling crispy fried shallots on top, steam rising. Professional food photography.',
+        video_prompt: 'Scene 7 (12-15s): Plating the Nasi Goreng and sprinkling crispy fried shallots on top, with steam rising.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      }
+    ];
+  } else if (templateId === 'sate-madura') {
+    return [
+      {
+        scene_number: 1,
+        title: 'Chicken Satay Plated',
+        image_prompt: 'A plate of grilled chicken satay (Sate Ayam Madura) with thick peanut sauce and sweet soy sauce drizzled over it. Steam rising. Professional food photography.',
+        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of grilled chicken satay on a plate, peanut sauce and sweet soy sauce drizzled over it, steam rising, with absolutely no text or borders visible.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 2,
+        title: 'Dicing Chicken Breast',
+        image_prompt: 'A close-up shot of hands dicing raw chicken breast on a wooden cutting board with a sharp kitchen knife. Food prep photography.',
+        video_prompt: 'Scene 2 (2-4s): Close-up of dicing raw chicken breast on a wooden board.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 3,
+        title: 'Skewering Chicken',
+        image_prompt: 'Hands skewering diced chicken meat onto bamboo skewers. Raw satay skewers on a plate. Food prep photography.',
+        video_prompt: 'Scene 3 (4-6s): Hands skewering chicken meat onto bamboo skewers.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 4,
+        title: 'Grilling Satay',
+        image_prompt: 'Grilling chicken satay skewers on a hot charcoal grill, smoke rising and sparks/flames flickering. Action food photography.',
+        video_prompt: 'Scene 4 (6-8s): Grilling chicken satay on a hot charcoal grill, smoke rising and flames flickering.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 5,
+        title: 'Making Peanut Sauce',
+        image_prompt: 'Grinding roasted peanuts, garlic, and red chilis in a stone mortar (cobek) to make a thick peanut sauce. Action food photography.',
+        video_prompt: 'Scene 5 (8-10s): Grinding peanuts, garlic, and spices in a stone mortar to make peanut sauce.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 6,
+        title: 'Serving Satay',
+        image_prompt: 'Serving chicken satay with rice cakes (lontong), drizzling peanut sauce and sweet soy sauce, sprinkling fried shallots. Professional food photography.',
+        video_prompt: 'Scene 6 (10-12s): Serving the chicken satay with rice cakes (lontong), drizzling sweet soy sauce and sprinkling fried shallots.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      }
+    ];
+  } else if (templateId === 'kopi-susu') {
+    return [
+      {
+        scene_number: 1,
+        title: 'Layered Iced Coffee',
+        image_prompt: 'Finished layered Iced Coffee Milk with Palm Sugar (Es Kopi Susu Gula Aren) in a tall glass, condensation on the glass. Professional beverage photography.',
+        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of the finished layered Iced Coffee Milk with Palm Sugar in a tall glass on a dark table, condensation on the glass, with absolutely no text or borders visible.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 2,
+        title: 'Pouring Gula Aren',
+        image_prompt: 'Pouring thick liquid palm sugar (gula aren) at the bottom of a tall empty glass. Glossy brown syrup. Action beverage photography.',
+        video_prompt: 'Scene 2 (2-4s): Pouring thick liquid palm sugar (gula aren) at the bottom of the glass.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 3,
+        title: 'Adding Ice Cubes',
+        image_prompt: 'Dropping fresh clear ice cubes into a glass containing palm sugar, creating small brown syrup splashes. Action beverage photography.',
+        video_prompt: 'Scene 3 (4-6s): Dropping fresh ice cubes into the glass, splashes of palm sugar.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 4,
+        title: 'Pouring Fresh Milk',
+        image_prompt: 'Pouring cold fresh white milk over ice cubes in a glass, creating beautiful swirls. Action beverage photography.',
+        video_prompt: 'Scene 4 (6-8s): Pouring cold fresh white milk over the ice cubes, creating layers.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      },
+      {
+        scene_number: 5,
+        title: 'Pouring Espresso',
+        image_prompt: 'Pouring hot dark espresso shot on top of the milk layer in a glass, slowly mixing and creating marbling patterns. Action beverage photography.',
+        video_prompt: 'Scene 5 (8-10s): Pouring hot dark espresso shot on top of the milk layer, showing espresso mixing slowly with the milk.',
+        imageUrl: '',
+        isGenerating: false,
+        batchId: ''
+      }
+    ];
+  }
+  return [];
+}
+
+// Render individual scene cards (Per-Frame Storyboard)
+function renderPerFrameScenes() {
+  if (!els.perFrameScenesList) return;
+  els.perFrameScenesList.innerHTML = '';
+  
+  if (!state.scenes || state.scenes.length === 0) {
+    els.perFrameScenesList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 14px; padding: 20px 0;">Belum ada scene. Tekan "Buat Storyboard AI" untuk menjana scene.</div>';
+    return;
+  }
+  
+  state.scenes.forEach(scene => {
+    const card = document.createElement('div');
+    card.className = 'scene-card';
+    
+    // Status and spinner on scene image generation
+    let imgHtml = '';
+    if (scene.imageUrl) {
+      imgHtml = `<img class="scene-card-img" src="${scene.imageUrl}" alt="${scene.title}">`;
+    } else if (scene.isGenerating) {
+      imgHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <div class="spinner" style="width: 32px; height: 32px; border-width: 3px;"></div>
+          <span style="font-size: 11px; color: var(--text-muted);">Rendering...</span>
+        </div>
+      `;
+    } else {
+      imgHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted);">
+          <i class="fa-solid fa-image" style="font-size: 32px;"></i>
+          <span style="font-size: 11px;">Belum ada gambar</span>
+        </div>
+      `;
+    }
+    
+    card.innerHTML = `
+      <div class="scene-card-header">
+        <span class="scene-card-title">SCENE ${scene.scene_number}: ${scene.title}</span>
+        <span class="scene-card-badge">Scene Frame</span>
+      </div>
+      <div class="scene-card-body">
+        <div style="display: flex; flex-direction: column;">
+          <div class="scene-card-image-box">
+            ${imgHtml}
+          </div>
+          <div class="scene-card-image-actions">
+            <button class="btn btn-secondary btn-scene-gen" style="margin-top: 0; padding: 6px 12px; font-size: 11px;" type="button" ${scene.isGenerating ? 'disabled' : ''}>
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Gambar
+            </button>
+            <button class="btn btn-secondary btn-scene-upload" style="margin-top: 0; padding: 6px 12px; font-size: 11px;" type="button">
+              <i class="fa-solid fa-upload"></i> Upload PNG
+            </button>
+            <button class="btn btn-secondary btn-scene-download" style="margin-top: 0; padding: 6px 12px; font-size: 11px;" type="button" ${!scene.imageUrl ? 'disabled' : ''}>
+              <i class="fa-solid fa-download"></i> Unduh Gambar
+            </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <button class="btn btn-secondary btn-scene-use-start" style="margin-top: 0; padding: 6px 4px; font-size: 10px;" type="button" ${!scene.imageUrl ? 'disabled' : ''} title="Pakai sebagai Gambar Awal video">
+                <i class="fa-solid fa-arrow-left"></i> Awal
+              </button>
+              <button class="btn btn-secondary btn-scene-use-end" style="margin-top: 0; padding: 6px 4px; font-size: 10px;" type="button" ${!scene.imageUrl ? 'disabled' : ''} title="Pakai sebagai Gambar Akhir video">
+                Akhir <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+            <input type="file" class="scene-file-input" style="display: none;" accept="image/*">
+          </div>
+        </div>
+        
+        <div class="scene-card-prompts">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 11px; margin-bottom: 4px;">Prompt Gambar (Image Prompt)</label>
+            <div class="input-wrapper">
+              <textarea class="scene-img-prompt" style="min-height: 80px; font-size: 12px; font-family: monospace; padding-left: 10px;">${scene.image_prompt || ''}</textarea>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 11px; margin-bottom: 4px;">Prompt Gerakan Video (Video Prompt)</label>
+            <div class="input-wrapper" style="align-items: stretch; gap: 8px;">
+              <textarea class="scene-vid-prompt" style="min-height: 80px; font-size: 12px; font-family: monospace; padding-left: 10px; flex: 1;">${scene.video_prompt || ''}</textarea>
+              <button class="btn btn-secondary btn-scene-copy-vid" style="margin-top: 0; width: 40px; padding: 0;" type="button" title="Salin Prompt Video ke Generator">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Wire up events for this scene card
+    const txtImgPrompt = card.querySelector('.scene-img-prompt');
+    const txtVidPrompt = card.querySelector('.scene-vid-prompt');
+    
+    txtImgPrompt.addEventListener('input', () => {
+      scene.image_prompt = txtImgPrompt.value;
+    });
+    txtVidPrompt.addEventListener('input', () => {
+      scene.video_prompt = txtVidPrompt.value;
+    });
+    
+    card.querySelector('.btn-scene-copy-vid').addEventListener('click', () => {
+      els.masterSeedancePrompt.value = scene.video_prompt;
+      state.masterSeedancePrompt = scene.video_prompt;
+      // Sync it to model specific prompt
+      const modelId = els.freebeatModelSelect.value;
+      if (modelId) {
+        state.videoPrompts[modelId] = scene.video_prompt;
+      }
+      showToast(`Prompt video Scene ${scene.scene_number} disalin ke generator!`, 'success');
+    });
+    
+    card.querySelector('.btn-scene-gen').addEventListener('click', () => {
+      generateIndividualSceneImage(scene);
+    });
+    
+    const fileInput = card.querySelector('.scene-file-input');
+    card.querySelector('.btn-scene-upload').addEventListener('click', () => {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        scene.imageUrl = evt.target.result;
+        renderPerFrameScenes();
+        showToast(`Gambar Scene ${scene.scene_number} berhasil diupload!`, 'success');
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    card.querySelector('.btn-scene-download').addEventListener('click', () => {
+      if (!scene.imageUrl) return;
+      const safeTitle = (state.storyboardTitle || 'storyboard').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      downloadFileFromUrl(scene.imageUrl, `scene_${scene.scene_number}_${safeTitle}.png`);
+    });
+    
+    card.querySelector('.btn-scene-use-start').addEventListener('click', () => {
+      state.vStartFile = null;
+      state.vStartImage = scene.imageUrl;
+      els.vStartPreviewImg.src = scene.imageUrl;
+      els.vStartPreviewContainer.style.display = 'flex';
+      els.btnUploadVStart.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Awal';
+      showToast(`Menggunakan Gambar Scene ${scene.scene_number} sebagai Gambar Awal!`, 'success');
+    });
+    
+    card.querySelector('.btn-scene-use-end').addEventListener('click', () => {
+      state.vEndFile = null;
+      state.vEndImage = scene.imageUrl;
+      els.vEndPreviewImg.src = scene.imageUrl;
+      els.vEndPreviewContainer.style.display = 'flex';
+      els.btnUploadVEnd.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Gambar Akhir';
+      showToast(`Menggunakan Gambar Scene ${scene.scene_number} sebagai Gambar Akhir!`, 'success');
+    });
+    
+    els.perFrameScenesList.appendChild(card);
+  });
+}
+
+// Generate individual scene image
+async function generateIndividualSceneImage(scene) {
+  const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
+  if (!activeKey) {
+    showToast('Silakan pilih atau tambahkan API Key Freebeat terlebih dahulu!', 'error');
+    return;
+  }
+  
+  if (!scene.image_prompt) {
+    showToast(`Prompt gambar Scene ${scene.scene_number} kosong!`, 'error');
+    return;
+  }
+  
+  scene.isGenerating = true;
+  renderPerFrameScenes();
+  showToast(`Mulai rendering gambar Scene ${scene.scene_number}...`, 'info');
+  
+  const requestBody = {
+    items: [
+      {
+        businessType: 9,
+        modelId: String(state.imageModel),
+        generationType: 6,
+        prompt: scene.image_prompt,
+        size: state.imageSize || "1024x1024",
+        resolution: state.imageSize || "1024x1024",
+        quality: "medium",
+        count: 1
+      }
+    ]
+  };
+  
+  try {
+    const response = await fetch('/proxy', {
+      method: 'POST',
+      headers: {
+        'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/createImageBatch',
+        'Authorization': activeKey.id,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) throw new Error(`HTTP status: ${response.status}`);
+    
+    const data = await response.json();
+    if (data.code !== 0) throw new Error(data.msg || 'Error dari API Freebeat');
+    
+    const batchId = data.data.batchId;
+    scene.batchId = batchId;
+    
+    startIndividualSceneImagePolling(scene, activeKey);
+  } catch (error) {
+    console.error('Individual scene generation error:', error);
+    showToast(`Gagal: ${error.message}`, 'error');
+    scene.isGenerating = false;
+    renderPerFrameScenes();
+  }
+}
+
+// Poll status of individual scene image generation
+function startIndividualSceneImagePolling(scene, activeKey) {
+  const batchId = scene.batchId;
+  let intervalId = setInterval(async () => {
+    try {
+      const response = await fetch('/proxy', {
+        method: 'POST',
+        headers: {
+          'x-target-url': 'https://api.freebeatfit.com/v1/ai/cli/queryBatch',
+          'Authorization': activeKey.id,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ batchId: batchId })
+      });
+      
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      if (data.code !== 0) return;
+      
+      const item = data.data.items?.[0];
+      if (!item) return;
+      
+      const status = String(item.status).toLowerCase();
+      const isSuccess = (status === 'success' || status === 'completed' || status === 'finished');
+      const isFailed = (status === 'failed' || status === 'rejected' || status === 'error');
+      
+      if (isSuccess || isFailed) {
+        clearInterval(intervalId);
+        scene.isGenerating = false;
+        
+        if (isSuccess) {
+          scene.imageUrl = item.imageUrl;
+          showToast(`Gambar Scene ${scene.scene_number} berhasil dibuat!`, 'success');
+          
+          // Log to DB history
+          const historyItem = {
+            id: batchId,
+            recipeTitle: `${state.storyboardTitle} - Scene ${scene.scene_number}`,
+            prompt: scene.image_prompt,
+            modelId: String(state.imageModel),
+            duration: 0,
+            resolution: state.imageSize || '1024x1024',
+            aspectRatio: '1:1',
+            generateAudio: false,
+            timestamp: Date.now(),
+            status: 'success',
+            videoUrl: item.imageUrl,
+            errorMsg: '',
+            credits: item.usedCredits !== undefined ? item.usedCredits : (item.credits !== undefined ? item.credits : 0),
+            type: 'image'
+          };
+          
+          fetch('/api/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(historyItem)
+          }).then(res => {
+            if (res.ok) {
+              loadFreebeatHistory();
+              refreshSessionUserCredits();
+            }
+          });
+        } else {
+          showToast(`Gagal: ${item.errorMessage || 'Server render failed'}`, 'error');
+        }
+        renderPerFrameScenes();
+      }
+    } catch (e) {
+      console.error('Scene polling error:', e);
+    }
+  }, 5000);
 }
 
 // Start application

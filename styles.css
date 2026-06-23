@@ -1360,4 +1360,139 @@ label {
   padding-top: 12px;
 }
 
+/* ----------------------------------------------------
+   Responsive Mobile Layout Styles
+   ---------------------------------------------------- */
+@media (max-width: 992px) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 20px;
+    box-shadow: none;
+  }
+  .main-content {
+    height: auto;
+    overflow: visible;
+  }
+  .storyboard-wrapper {
+    gap: 16px;
+    padding: 0 8px;
+  }
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .nav-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nav-actions button {
+    margin-right: 0 !important;
+  }
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+  .data-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* ----------------------------------------------------
+   Individual Scene Cards (Per-Frame Storyboard)
+   ---------------------------------------------------- */
+.scene-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color var(--transition-normal);
+  text-align: left;
+}
+.scene-card:hover {
+  border-color: rgba(var(--accent-gold-rgb), 0.3);
+}
+.scene-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+.scene-card-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+.scene-card-body {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+}
+@media (max-width: 768px) {
+  .scene-card-body {
+    grid-template-columns: 1fr;
+  }
+}
+.scene-card-image-box {
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: var(--bg-darker);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.scene-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scene-card-image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.scene-card-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scene-card-badge {
+  background: rgba(var(--accent-gold-rgb), 0.1);
+  color: var(--accent-gold);
+  border: 1px solid rgba(var(--accent-gold-rgb), 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+
 

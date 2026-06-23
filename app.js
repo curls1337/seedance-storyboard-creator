@@ -129,29 +129,7 @@ const modelConfigs = {
   }
 };
 
-// Built-in Templates Data
-const templates = {
-  'indomie-nyemek': {
-    title: 'INDOMIE NYEMEK VIRAL',
-    master_grid_prompt: 'Create a vertical storyboard grid image exactly like a cooking video recipe infographic. The image should contain a grid layout of 11 sequential vertical panels (organized in rows, 4 columns per row). Each panel must depict a step of cooking "INDOMIE NYEMEK VIRAL": 1. Finished dish (Hero shot), 2. Raw ingredients, 3. Slicing garlic and chilis, 4. Sautéing chilis and garlic in oil, 5. Pouring water, 6. Adding noodles, 7. Adding raw egg, 8. Adding Indomie seasoning, 9. Stirring noodles (nyemek texture), 10. Sprinkling green onions, 11. Lifting noodles with chopsticks. On the top-left of each panel, overlay the yellow bold text "SCENE X" (where X is 1 to 11). On the top-right, overlay white text of timestamps like "0-1s", "1-2s", "2-3s", etc. Directly below each panel image, draw a solid black footer containing a bold yellow/gold title in Indonesian (e.g., "INDOMIE NYEMEK VIRAL", "BAHAN-BAHAN", "IRIS BAWANG & CABAI") and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. The background of the entire image is dark. High-quality professional food photography style.',
-    master_seedance_prompt: 'IMPORTANT: The input is a storyboard grid with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the food and action in clean full screen. At the very beginning (0-1s), start directly with a clean, full-screen cinematic shot of the finished Indomie Nyemek, showing steam rising and the runny yolk of the egg, with absolutely no text or borders visible.\n- Scene 2 (1-2s): Smoothly transition to show the raw ingredients (noodle packet, chilis, egg, garlic) arranged on a rustic wooden table, camera slowly zooming out.\n- Scene 3 (2-3s): Slicing garlic and red chilis on a wooden cutting board with a kitchen knife.\n- Scene 4 (3-4s): Sautéing sliced chilis and garlic in hot cooking oil in a pan, sizzling with light steam.\n- Scene 5 (4-6s): Pouring water into the frying pan, causing dramatic steam and bubbles.\n- Scene 6 (6-7s): Placing a noodle block into the boiling spicy broth.\n- Scene 7 (7-9s): Cracking a raw egg into the boiling noodles, with the yolk intact.\n- Scene 8 (9-10s): Pouring seasoning powder and chili oil from the sachet onto the noodles.\n- Scene 9 (10-12s): Stirring the noodles with a wooden spoon as the sauce thickens into a rich "nyemek" texture.\n- Scene 10 (12-14s): Sprinkling fresh green onions on top of the cooked noodles, steam rising.\n- Scene 11 (14-15s): Lifting a mouthful of noodles with chopsticks, capturing the glossy sauce dripping in slow motion.'
-  },
-  'nasi-goreng': {
-    title: 'NASI GORENG SPESIAL',
-    master_grid_prompt: 'Create a vertical storyboard grid image exactly like a cooking video recipe infographic. The image should contain a grid layout of 7 sequential vertical panels (organized in rows, 3 columns per row). Each panel must depict a step of cooking Indonesian "NASI GORENG SPESIAL": 1. Nasi Goreng Spesial served on a plate with egg, cucumber, crackers, 2. Raw shallots, garlic, chilis on mortar and pestle, 3. Sautéing ground spices paste in oil in a wok, 4. Scrambling an egg inside the wok with sizzling spices, 5. Adding white rice, 6. Drizzling sweet soy sauce (kecap manis), 7. Sprinkling fried shallots on the finished dish. On the top-left of each panel, overlay the yellow bold text "SCENE X" (where X is 1 to 7). On the top-right, overlay white text of timestamps like "0-2s", "2-4s", etc. Directly below each panel, draw a solid black footer containing a bold yellow title and short Indonesian description. Separate all panels with a clean thin white border line. High-quality professional food photography style, dark theme.',
-    master_seedance_prompt: 'IMPORTANT: The input is a storyboard grid with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the food and action in clean full screen. At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of a hot plate of Nasi Goreng Spesial on a rustic table, showing steam rising from the egg yolk, with absolutely no text or borders visible.\n- Scene 2 (2-4s): Smoothly transition to show the fresh shallots, garlic, and chilis arranged on a stone mortar and pestle.\n- Scene 3 (4-6s): Sautéing the ground spice paste in hot oil in a wok, with spatula stirring the paste.\n- Scene 4 (6-8s): Cracking and scrambling an egg into the sizzling spices.\n- Scene 5 (8-10s): Adding cold white rice into the wok, showing steam rising.\n- Scene 6 (10-12s): Drizzling sweet soy sauce (kecap manis) over the rice and stirring.\n- Scene 7 (12-15s): Plating the Nasi Goreng and sprinkling crispy fried shallots on top, with steam rising.'
-  },
-  'sate-madura': {
-    title: 'SATE AYAM MADURA',
-    master_grid_prompt: 'Create a vertical storyboard grid image exactly like a cooking video recipe infographic. The image should contain a grid layout of 6 sequential vertical panels (organized in rows, 3 columns per row). Each panel must depict a step of cooking "SATE AYAM MADURA": 1. Plated chicken satay with peanut sauce and soy sauce, 2. Dicing raw chicken breast, 3. Skewering chicken onto bamboo skewers, 4. Grilling satay on hot charcoal grill with smoke, 5. Making peanut sauce in a mortar, 6. Serving with rice cakes (lontong) and sweet soy sauce. On the top-left of each panel, overlay the yellow bold text "SCENE X" (where X is 1 to 6). On the top-right, overlay white text of timestamps like "0-2s", "2-4s", etc. Directly below each panel, draw a solid black footer containing a bold yellow/gold title in Indonesian (e.g., "SATE AYAM MADURA", "POTONG AYAM", "TUSUK SATE") and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. The background of the entire image is dark. High-quality professional food photography style.',
-    master_seedance_prompt: 'IMPORTANT: The input is a storyboard grid with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the food and action in clean full screen. At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of grilled chicken satay on a plate, peanut sauce and sweet soy sauce drizzled over it, steam rising, with absolutely no text or borders visible.\n- Scene 2 (2-4s): Close-up of dicing raw chicken breast on a wooden board.\n- Scene 3 (4-6s): Hands skewering chicken meat onto bamboo skewers.\n- Scene 4 (6-8s): Grilling chicken satay on a hot charcoal grill, smoke rising and flames flickering.\n- Scene 5 (8-10s): Grinding peanuts, garlic, and spices in a stone mortar to make peanut sauce.\n- Scene 6 (10-12s): Serving the chicken satay with rice cakes (lontong), drizzling sweet soy sauce and sprinkling fried shallots.'
-  },
-  'kopi-susu': {
-    title: 'ES KOPI SUSU GULA AREN',
-    master_grid_prompt: 'Create a vertical storyboard grid image exactly like a beverage video recipe infographic. The image should contain a grid layout of 5 sequential vertical panels (organized in rows, 3 columns per row). Each panel must depict a step of making "ES KOPI SUSU GULA AREN": 1. Finished iced coffee in a tall glass with beautiful layers, 2. Pouring liquid palm sugar (gula aren) into the glass, 3. Adding ice cubes, 4. Pouring fresh milk over the ice, 5. Pouring a double shot of espresso on top. On the top-left of each panel, overlay the yellow bold text "SCENE X" (where X is 1 to 5). On the top-right, overlay white text of timestamps like "0-2s", "2-4s", etc. Directly below each panel, draw a solid black footer containing a bold yellow/gold title in Indonesian (e.g., "ES KOPI SUSU GULA AREN", "TUANG GULA AREN", "MASUKKAN ES BATU") and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. The background of the entire image is dark. High-quality professional food and beverage photography style.',
-    master_seedance_prompt: 'IMPORTANT: The input is a storyboard grid with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the beverage and action in clean full screen. At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of the finished layered Iced Coffee Milk with Palm Sugar in a tall glass on a dark table, condensation on the glass, with absolutely no text or borders visible.\n- Scene 2 (2-4s): Pouring thick liquid palm sugar (gula aren) at the bottom of the glass.\n- Scene 3 (4-6s): Dropping fresh ice cubes into the glass, splashes of palm sugar.\n- Scene 4 (6-8s): Pouring cold fresh white milk over the ice cubes, creating layers.\n- Scene 5 (8-10s): Pouring hot dark espresso shot on top of the milk layer, showing espresso mixing slowly with the milk.'
-  }
-};
+// Built-in Templates Data loaded dynamically from templates.js
 
 // UI Elements
 const els = {
@@ -349,8 +327,21 @@ async function refreshSessionUserCredits() {
   }
 }
 
+// Populate dropdown from templates.js
+function populateTemplateDropdown() {
+  if (!els.templateSelect) return;
+  els.templateSelect.innerHTML = '<option value="" disabled selected>-- Pilih Template Storyboard --</option>';
+  Object.entries(templates).forEach(([id, tpl]) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = tpl.title;
+    els.templateSelect.appendChild(opt);
+  });
+}
+
 // Initialization
 function init() {
+  populateTemplateDropdown();
   setupEventListeners();
   setupTabNavigation();
   updateModelOptions();
@@ -1221,8 +1212,8 @@ function loadTemplate(templateId) {
   if (!tpl) return;
   
   state.storyboardTitle = tpl.title;
-  state.masterGridPrompt = tpl.master_grid_prompt;
-  state.masterSeedancePrompt = tpl.master_seedance_prompt;
+  state.masterGridPrompt = generateGridPrompt(tpl.title, tpl.scenes);
+  state.masterSeedancePrompt = generateSeedancePrompt(tpl.title, tpl.scenes);
   
   // Reset image
   state.combinedImage = '';
@@ -1272,11 +1263,8 @@ function loadTemplate(templateId) {
     state.videoPrompts[modelId] = state.masterSeedancePrompt;
   }
   
-  // Adjust scenes count in slider if preset has standard scenes
-  let defaultCount = 11;
-  if (templateId === 'nasi-goreng') defaultCount = 7;
-  else if (templateId === 'sate-madura') defaultCount = 6;
-  else if (templateId === 'kopi-susu') defaultCount = 5;
+  // Adjust scenes count in slider dynamically
+  let defaultCount = tpl.scenes.length;
   
   state.sceneCount = defaultCount;
   els.sceneCount.value = defaultCount;
@@ -1422,9 +1410,13 @@ async function copySeedancePrompt() {
 
 // API Generation: Create Storyboard Steps with LLM (via secure endpoint)
 async function generateStoryboardWithAI() {
-  const concept = els.recipeConcept.value.trim();
+  let concept = els.recipeConcept.value.trim();
+  const selectedTemplateId = els.templateSelect.value;
+  if (!concept && selectedTemplateId && templates[selectedTemplateId]) {
+    concept = templates[selectedTemplateId].title;
+  }
   if (!concept) {
-    showToast('Harap masukkan konsep resep/video terlebih dahulu!', 'error');
+    showToast('Harap masukkan konsep resep/video atau pilih template terlebih dahulu!', 'error');
     return;
   }
   
@@ -1434,10 +1426,10 @@ async function generateStoryboardWithAI() {
   let systemPrompt = '';
   if (state.storyboardMode === 'per-frame') {
     systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
-Your task is to take a cooking recipe or video concept and design a step-by-step storyboard consisting of ${state.sceneCount} sequential scenes.
-CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated image prompts. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance in all scenes involving the character to maintain visual consistency.
+Your task is to take a cooking recipe, video concept, or a base template and design a step-by-step storyboard consisting of ${state.sceneCount} sequential scenes.
+CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated image prompts of all scenes to maintain visual consistency. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance in all scenes involving the character to maintain visual consistency.
 For each scene, you must design:
-1. An image prompt ("image_prompt") in English that will generate a clean, high-quality, professional food/beverage photography image representing that scene. The image MUST contain NO text overlays, NO borders, and NO grid lines.
+1. An image prompt ("image_prompt") in English that will generate a clean, high-quality, professional food/beverage or product photography image representing that scene. The image MUST contain NO text overlays, NO borders, and NO grid lines.
 2. A video prompt ("video_prompt") in English that describes the animation, camera movement, and detail for that specific scene starting from the generated image. Since this is for a single image to video, it should describe the motion starting from the image itself.
 3. A title ("title") in Indonesian representing the scene action (e.g. "Finished Dish", "Bahan-Bahan", "Iris Bawang").
 
@@ -1456,7 +1448,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
 }`;
   } else {
     systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
-Your task is to take a cooking recipe or video concept and design:
+Your task is to take a cooking recipe, video concept, or a base template and design:
 1. A master grid prompt ("master_grid_prompt") in English that will generate a single vertical storyboard grid image consisting of ${state.sceneCount} sequential vertical panels. The image should be formatted exactly like a cooking video recipe infographic. Each panel must depict a step. Instruct the image generator to draw "SCENE X" (yellow bold text) on the top-left of each panel, timestamps (white text) on the top-right, and a solid black footer directly below each panel containing a bold yellow/gold title in Indonesian and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. Use a dark background and professional food photography style.
 CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated master grid prompt. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance consistently in all panels involving the character.
 2. A single master Seedance prompt ("master_seedance_prompt") in English. This is a unified prompt that will be sent to Seedance along with the uploaded grid image to animate the storyboard. It must describe the chronological animation, camera movement, and visual details for each of the ${state.sceneCount} panels sequentially, referencing the timestamps.
@@ -1478,19 +1470,28 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     const isPerFrame = state.storyboardMode === 'per-frame';
     const storyboardTypeStr = isPerFrame ? 'per-frame' : 'single-prompt master grid';
 
+    let userText = `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}".`;
+    if (selectedTemplateId && templates[selectedTemplateId]) {
+      const tpl = templates[selectedTemplateId];
+      userText += `\n\nNote: You should base the storyboard on the following predefined template scenes, but adapt them to incorporate the visual features of the uploaded reference images if provided:\n`;
+      tpl.scenes.forEach((s, i) => {
+        userText += `Scene ${i+1}: ${s.title}\n- Image Prompt Base: ${s.image_prompt}\n- Video Prompt Base: ${s.video_prompt}\n`;
+      });
+    }
+
     if (state.productImage || state.characterImage) {
       const userContent = [
-        { type: 'text', text: `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}".` }
+        { type: 'text', text: userText }
       ];
       
       let instructions = '';
       if (state.productImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.productImage } });
-        instructions += ' Analyze the attached product reference image. You MUST explicitly describe this specific product, its visual features, brand logo, colors, packaging, and branding details in the generated image prompts.';
+        instructions += ' Analyze the attached product reference image. You MUST explicitly describe this specific product, its visual features, brand logo, colors, packaging, and branding details in the generated image prompts of all scenes to maintain visual consistency.';
       }
       if (state.characterImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.characterImage } });
-        instructions += ' Analyze the attached character reference image. You MUST explicitly and consistently describe this specific character\'s appearance, face, hair style, clothing, and styling in all scenes involving the character.';
+        instructions += ' Analyze the attached character reference image. You MUST explicitly and consistently describe this specific character\'s appearance, face, hair style, clothing, and styling in all scenes involving the character to maintain visual consistency.';
       }
       
       userContent[0].text += instructions;
@@ -1502,7 +1503,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     } else {
       messages.push({
         role: 'user',
-        content: `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}"`
+        content: userText
       });
     }
 
@@ -1999,20 +2000,62 @@ async function runOneClickFlow() {
   }
 }
 
-function handleProductImageUpload(event) {
+// Helper function to compress and resize base64 images before sending to vision LLM
+function compressAndResizeImage(file, maxDimension = 800) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      };
+      img.onerror = () => {
+        resolve(e.target.result); // Fallback to original
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Gagal membaca file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleProductImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    state.productImage = e.target.result;
+  showToast('Memproses gambar referensi produk...', 'info');
+  try {
+    const compressedDataUrl = await compressAndResizeImage(file, 800);
+    state.productImage = compressedDataUrl;
     els.productPreviewImg.src = state.productImage;
     els.productPreviewContainer.style.display = 'flex';
     els.btnClearProduct.style.display = 'block';
     els.btnUploadProduct.innerHTML = '<i class="fa-solid fa-camera"></i> Ganti Foto Produk';
-    showToast('Gambar referensi produk berhasil diunggah!', 'success');
-  };
-  reader.readAsDataURL(file);
+    showToast('Gambar referensi produk berhasil diunggah dan dioptimalkan!', 'success');
+  } catch (error) {
+    console.error('Product image processing error:', error);
+    showToast('Gagal memproses gambar referensi produk.', 'error');
+  }
 }
 
 function clearProductImage() {
@@ -2025,20 +2068,23 @@ function clearProductImage() {
   showToast('Gambar referensi produk dihapus.', 'info');
 }
 
-function handleCharacterImageUpload(event) {
+async function handleCharacterImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    state.characterImage = e.target.result;
+  showToast('Memproses gambar referensi karakter...', 'info');
+  try {
+    const compressedDataUrl = await compressAndResizeImage(file, 800);
+    state.characterImage = compressedDataUrl;
     els.characterPreviewImg.src = state.characterImage;
     els.characterPreviewContainer.style.display = 'flex';
     els.btnClearCharacter.style.display = 'block';
     els.btnUploadCharacter.innerHTML = '<i class="fa-solid fa-user-astronaut"></i> Ganti Foto Karakter';
-    showToast('Gambar referensi karakter berhasil diunggah!', 'success');
-  };
-  reader.readAsDataURL(file);
+    showToast('Gambar referensi karakter berhasil diunggah dan dioptimalkan!', 'success');
+  } catch (error) {
+    console.error('Character image processing error:', error);
+    showToast('Gagal memproses gambar referensi karakter.', 'error');
+  }
 }
 
 function clearCharacterImage() {
@@ -3040,281 +3086,18 @@ function handleStoryboardModeChange() {
 
 // Helper to pre-populate storyboard template scenes for per-frame mode
 function getScenesForTemplate(templateId) {
-  if (templateId === 'indomie-nyemek') {
-    return [
-      {
-        scene_number: 1,
-        title: 'Finished Dish (Hero Shot)',
-        image_prompt: 'A close-up shot of a finished Indomie Nyemek dish in a bowl, steam rising, with a runny egg yolk on top. Professional food photography style, dark background.',
-        video_prompt: 'At the very beginning (0-1s), start directly with a clean, full-screen cinematic shot of the finished Indomie Nyemek, showing steam rising and the runny yolk of the egg, with absolutely no text or borders visible.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 2,
-        title: 'Raw Ingredients',
-        image_prompt: 'Raw ingredients for Indomie Nyemek including noodle packet, red chilis, raw eggs, and garlic arranged on a rustic wooden table. Professional food photography.',
-        video_prompt: 'Scene 2 (1-2s): Smoothly transition to show the raw ingredients (noodle packet, chilis, egg, garlic) arranged on a rustic wooden table, camera slowly zooming out.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 3,
-        title: 'Slicing Garlic & Chilis',
-        image_prompt: 'A close-up shot of hands slicing garlic and red chilis on a wooden cutting board with a kitchen knife. Slices of chilis scattered. Food prep photography.',
-        video_prompt: 'Scene 3 (2-3s): Slicing garlic and red chilis on a wooden cutting board with a kitchen knife.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 4,
-        title: 'Sautéing Chilis & Garlic',
-        image_prompt: 'Sautéing sliced chilis and garlic in hot cooking oil in a pan, sizzling. Slices of garlic and red chili visible. Action food photography.',
-        video_prompt: 'Scene 4 (3-4s): Sautéing sliced chilis and garlic in hot cooking oil in a pan, sizzling with light steam.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 5,
-        title: 'Pouring Water',
-        image_prompt: 'Pouring water into a frying pan containing sautéed chilis and garlic, creating dramatic steam, splashes and bubbles. Action food photography.',
-        video_prompt: 'Scene 5 (4-6s): Pouring water into the frying pan, causing dramatic steam and bubbles.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 6,
-        title: 'Adding Noodles',
-        image_prompt: 'Placing a dry instant noodle block into the boiling spicy red broth in a frying pan. Sizzling and steam. Food photography.',
-        video_prompt: 'Scene 6 (6-7s): Placing a noodle block into the boiling spicy broth.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 7,
-        title: 'Adding Raw Egg',
-        image_prompt: 'Cracking a raw egg into the boiling noodles in the pan, yolk remains intact and glossy. Steam rising. Action food photography.',
-        video_prompt: 'Scene 7 (7-9s): Cracking a raw egg into the boiling noodles, with the yolk intact.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 8,
-        title: 'Adding Seasoning',
-        image_prompt: 'Pouring instant noodle seasoning powder and chili oil from the plastic sachet onto the boiling noodles in the pan. Action food photography.',
-        video_prompt: 'Scene 8 (9-10s): Pouring seasoning powder and chili oil from the sachet onto the noodles.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 9,
-        title: 'Stirring Noodles',
-        image_prompt: 'Stirring noodles with a wooden spoon in a pan as the sauce thickens into a rich, glossy nyemek texture. Steam rising. Action food photography.',
-        video_prompt: 'Scene 9 (10-12s): Stirring the noodles with a wooden spoon as the sauce thickens into a rich "nyemek" texture.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 10,
-        title: 'Sprinkling Green Onions',
-        image_prompt: 'Sprinkling freshly chopped green onions on top of the cooked noodles in the pan, steam rising. Close-up action food photography.',
-        video_prompt: 'Scene 10 (12-14s): Sprinkling fresh green onions on top of the cooked noodles, steam rising.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 11,
-        title: 'Lifting Noodles',
-        image_prompt: 'Lifting a mouthful of Indomie Nyemek noodles with wooden chopsticks, glossy sauce dripping in slow motion. Close-up food photography.',
-        video_prompt: 'Scene 11 (14-15s): Lifting a mouthful of noodles with chopsticks, capturing the glossy sauce dripping in slow motion.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      }
-    ];
-  } else if (templateId === 'nasi-goreng') {
-    return [
-      {
-        scene_number: 1,
-        title: 'Nasi Goreng Plated',
-        image_prompt: 'Nasi Goreng Spesial served on a plate with a fried egg, cucumber slices, and crackers on a rustic wooden table. Steam rising. Professional food photography.',
-        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of a hot plate of Nasi Goreng Spesial on a rustic table, showing steam rising from the egg yolk, with absolutely no text or borders visible.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 2,
-        title: 'Raw Spices',
-        image_prompt: 'Raw shallots, garlic, and red chilis arranged on a stone mortar and pestle. Professional food ingredient photography.',
-        video_prompt: 'Scene 2 (2-4s): Smoothly transition to show the fresh shallots, garlic, and chilis arranged on a stone mortar and pestle.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 3,
-        title: 'Sautéing Ground Spices',
-        image_prompt: 'Sautéing ground spice paste in hot oil in a wok, with a spatula stirring the paste. Sizzling and steam. Action food photography.',
-        video_prompt: 'Scene 3 (4-6s): Sautéing the ground spice paste in hot oil in a wok, with spatula stirring the paste.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 4,
-        title: 'Scrambling Egg in Wok',
-        image_prompt: 'Cracking and scrambling an egg inside a wok with sizzling ground spices, steam rising. Action food photography.',
-        video_prompt: 'Scene 4 (6-8s): Cracking and scrambling an egg into the sizzling spices.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 5,
-        title: 'Adding Rice',
-        image_prompt: 'Adding cold white cooked rice into the wok with scrambled egg and spices, steam rising. Action food photography.',
-        video_prompt: 'Scene 5 (8-10s): Adding cold white rice into the wok, showing steam rising.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 6,
-        title: 'Drizzling Sweet Soy Sauce',
-        image_prompt: 'Drizzling sweet soy sauce (kecap manis) over the rice in a wok and stirring. Glossy texture. Action food photography.',
-        video_prompt: 'Scene 6 (10-12s): Drizzling sweet soy sauce (kecap manis) over the rice and stirring.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 7,
-        title: 'Plating and Shallots',
-        image_prompt: 'Plating the Nasi Goreng on a dish and sprinkling crispy fried shallots on top, steam rising. Professional food photography.',
-        video_prompt: 'Scene 7 (12-15s): Plating the Nasi Goreng and sprinkling crispy fried shallots on top, with steam rising.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      }
-    ];
-  } else if (templateId === 'sate-madura') {
-    return [
-      {
-        scene_number: 1,
-        title: 'Chicken Satay Plated',
-        image_prompt: 'A plate of grilled chicken satay (Sate Ayam Madura) with thick peanut sauce and sweet soy sauce drizzled over it. Steam rising. Professional food photography.',
-        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of grilled chicken satay on a plate, peanut sauce and sweet soy sauce drizzled over it, steam rising, with absolutely no text or borders visible.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 2,
-        title: 'Dicing Chicken Breast',
-        image_prompt: 'A close-up shot of hands dicing raw chicken breast on a wooden cutting board with a sharp kitchen knife. Food prep photography.',
-        video_prompt: 'Scene 2 (2-4s): Close-up of dicing raw chicken breast on a wooden board.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 3,
-        title: 'Skewering Chicken',
-        image_prompt: 'Hands skewering diced chicken meat onto bamboo skewers. Raw satay skewers on a plate. Food prep photography.',
-        video_prompt: 'Scene 3 (4-6s): Hands skewering chicken meat onto bamboo skewers.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 4,
-        title: 'Grilling Satay',
-        image_prompt: 'Grilling chicken satay skewers on a hot charcoal grill, smoke rising and sparks/flames flickering. Action food photography.',
-        video_prompt: 'Scene 4 (6-8s): Grilling chicken satay on a hot charcoal grill, smoke rising and flames flickering.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 5,
-        title: 'Making Peanut Sauce',
-        image_prompt: 'Grinding roasted peanuts, garlic, and red chilis in a stone mortar (cobek) to make a thick peanut sauce. Action food photography.',
-        video_prompt: 'Scene 5 (8-10s): Grinding peanuts, garlic, and spices in a stone mortar to make peanut sauce.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 6,
-        title: 'Serving Satay',
-        image_prompt: 'Serving chicken satay with rice cakes (lontong), drizzling peanut sauce and sweet soy sauce, sprinkling fried shallots. Professional food photography.',
-        video_prompt: 'Scene 6 (10-12s): Serving the chicken satay with rice cakes (lontong), drizzling sweet soy sauce and sprinkling fried shallots.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      }
-    ];
-  } else if (templateId === 'kopi-susu') {
-    return [
-      {
-        scene_number: 1,
-        title: 'Layered Iced Coffee',
-        image_prompt: 'Finished layered Iced Coffee Milk with Palm Sugar (Es Kopi Susu Gula Aren) in a tall glass, condensation on the glass. Professional beverage photography.',
-        video_prompt: 'At the very beginning (0-2s), start directly with a clean, full-screen cinematic shot of the finished layered Iced Coffee Milk with Palm Sugar in a tall glass on a dark table, condensation on the glass, with absolutely no text or borders visible.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 2,
-        title: 'Pouring Gula Aren',
-        image_prompt: 'Pouring thick liquid palm sugar (gula aren) at the bottom of a tall empty glass. Glossy brown syrup. Action beverage photography.',
-        video_prompt: 'Scene 2 (2-4s): Pouring thick liquid palm sugar (gula aren) at the bottom of the glass.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 3,
-        title: 'Adding Ice Cubes',
-        image_prompt: 'Dropping fresh clear ice cubes into a glass containing palm sugar, creating small brown syrup splashes. Action beverage photography.',
-        video_prompt: 'Scene 3 (4-6s): Dropping fresh ice cubes into the glass, splashes of palm sugar.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 4,
-        title: 'Pouring Fresh Milk',
-        image_prompt: 'Pouring cold fresh white milk over ice cubes in a glass, creating beautiful swirls. Action beverage photography.',
-        video_prompt: 'Scene 4 (6-8s): Pouring cold fresh white milk over the ice cubes, creating layers.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      },
-      {
-        scene_number: 5,
-        title: 'Pouring Espresso',
-        image_prompt: 'Pouring hot dark espresso shot on top of the milk layer in a glass, slowly mixing and creating marbling patterns. Action beverage photography.',
-        video_prompt: 'Scene 5 (8-10s): Pouring hot dark espresso shot on top of the milk layer, showing espresso mixing slowly with the milk.',
-        imageUrl: '',
-        isGenerating: false,
-        batchId: ''
-      }
-    ];
-  }
-  return [];
+  const tpl = templates[templateId];
+  if (!tpl) return [];
+  
+  return tpl.scenes.map((scene, idx) => ({
+    scene_number: idx + 1,
+    title: scene.title || `Scene ${idx + 1}`,
+    image_prompt: scene.image_prompt || '',
+    video_prompt: scene.video_prompt || '',
+    imageUrl: '',
+    isGenerating: false,
+    batchId: ''
+  }));
 }
 
 // Render individual scene cards (Per-Frame Storyboard)

@@ -32,7 +32,8 @@ const state = {
   vRefFile: null,
   vRefVideo: '',
   videoGenerationType: 1,
-  freebeatImageIntervals: {} // { batchId: intervalId }
+  freebeatImageIntervals: {}, // { batchId: intervalId }
+  latestVideoBatchId: ''
 };
 
 // Freebeat Video Studio Model Configurations (Duration, Resolution & Cost Mapping)
@@ -2343,6 +2344,7 @@ async function handleGenerateFreebeatVideo() {
       throw new Error(item.message || 'Render video ditolak oleh server Freebeat.');
     }
     
+    state.latestVideoBatchId = batchId;
     els.freebeatVideoLoaderText.textContent = 'Render video diterima! Menunggu antrean rendering...';
     showToast('Render video berhasil dibuat! Memulai polling status...', 'success');
     
@@ -2371,6 +2373,10 @@ async function handleGenerateFreebeatVideo() {
     if (saveResponse.ok) {
       await loadFreebeatHistory();
     }
+    
+    // Re-enable generate button immediately so user can queue another video
+    els.btnGenerateFreebeatVideo.disabled = false;
+    els.btnGenerateFreebeatVideo.innerHTML = '<i class="fa-solid fa-video"></i> Mulai Generate Video';
     
     // Start Polling
     startFreebeatVideoPolling(batchId, activeKey, estimatedCost);
@@ -2462,14 +2468,25 @@ function startFreebeatVideoPolling(batchId, activeKey, estimatedCost) {
           
           await loadFreebeatKeys();
           await loadFreebeatHistory();
-          showFreebeatVideoSuccess(videoUrl);
+          
+          if (batchId === state.latestVideoBatchId) {
+            showFreebeatVideoSuccess(videoUrl);
+          } else {
+            showToast('Video di latar belakang berhasil dibuat!', 'success');
+          }
         } else {
           await loadFreebeatHistory();
-          showFreebeatVideoError(errorMsg);
+          if (batchId === state.latestVideoBatchId) {
+            showFreebeatVideoError(errorMsg);
+          } else {
+            showToast(`Video di latar belakang gagal: ${errorMsg}`, 'error');
+          }
         }
       } else {
-        // Update loading status text
-        els.freebeatVideoLoaderText.textContent = `Rendering video... Status: ${status.toUpperCase()}`;
+        // Update loading status text only if this is the latest video
+        if (batchId === state.latestVideoBatchId) {
+          els.freebeatVideoLoaderText.textContent = `Rendering video... Status: ${status.toUpperCase()}`;
+        }
       }
     } catch (err) {
       console.error('Polling error:', err);

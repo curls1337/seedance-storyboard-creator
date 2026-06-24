@@ -15,6 +15,8 @@ const state = {
   sceneCount: 11,
   productImage: '',
   characterImage: '',
+  productImageUrl: '',
+  characterImageUrl: '',
   
   // Freebeat Keys State
   freebeatKeys: [], // [{ id: 'uuid', label: 'My Key', key: 'sk-...', balance: 1000 }]
@@ -1471,7 +1473,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       let instructions = '';
       if (state.productImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.productImage } });
-        instructions += ' Analyze the attached product reference image. You MUST explicitly describe this specific product, its visual features, brand logo, colors, packaging, and branding details in the generated image prompts of all scenes to maintain visual consistency.';
+        instructions += ' Analyze the attached product reference image. You MUST explicitly and in detail describe this specific product (e.g. its packaging shape, colors, brand text/logo placement, and physical details) in the generated image prompts of all scenes to maintain visual consistency.';
       }
       if (state.characterImage) {
         userContent.push({ type: 'image_url', image_url: { url: state.characterImage } });
@@ -1593,6 +1595,37 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
   }
 }
 
+// Helper to upload reference images to Freebeat and cache S3 URLs
+async function getUploadedReferenceUrls() {
+  let productUrl = state.productImageUrl || '';
+  if (state.productImage && !productUrl) {
+    try {
+      const blob = dataURLtoBlob(state.productImage);
+      const file = new File([blob], 'product_ref.png', { type: blob.type });
+      productUrl = await uploadFileToFreebeat(file, 'agent/product');
+      state.productImageUrl = productUrl;
+    } catch (e) {
+      console.error('Failed to upload product reference image:', e);
+      showToast('Gagal mengunggah gambar referensi produk ke server Freebeat.', 'warning');
+    }
+  }
+
+  let characterUrl = state.characterImageUrl || '';
+  if (state.characterImage && !characterUrl) {
+    try {
+      const blob = dataURLtoBlob(state.characterImage);
+      const file = new File([blob], 'character_ref.png', { type: blob.type });
+      characterUrl = await uploadFileToFreebeat(file, 'agent/character');
+      state.characterImageUrl = characterUrl;
+    } catch (e) {
+      console.error('Failed to upload character reference image:', e);
+      showToast('Gagal mengunggah gambar referensi karakter ke server Freebeat.', 'warning');
+    }
+  }
+
+  return { productUrl, characterUrl };
+}
+
 // API Generation: Generate the Single Combined Grid Image using the Master Grid Prompt
 async function generateCombinedStoryboardImage() {
   const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
@@ -1615,20 +1648,37 @@ async function generateCombinedStoryboardImage() {
   els.combinedStoryboardImage.style.display = 'none';
   els.combinedImageLoader.style.display = 'flex';
   els.combinedLoaderText.textContent = 'Memulai antrean render Image Studio...';
-  
+
+  let productUrl = '';
+  let characterUrl = '';
+  if (state.productImage || state.characterImage) {
+    els.combinedLoaderText.textContent = 'Mengunggah gambar referensi ke server...';
+    const urls = await getUploadedReferenceUrls();
+    productUrl = urls.productUrl;
+    characterUrl = urls.characterUrl;
+    els.combinedLoaderText.textContent = 'Memulai antrean render Image Studio...';
+  }
+
+  const itemData = {
+    businessType: 9,
+    modelId: String(state.imageModel),
+    generationType: 6,
+    prompt: prompt.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
+    size: state.imageSize || "1024x1024",
+    resolution: state.imageSize || "1024x1024",
+    quality: "medium",
+    count: parseInt(state.imageCount, 10) || 1
+  };
+
+  const refImages = [];
+  if (productUrl) refImages.push(productUrl);
+  if (characterUrl) refImages.push(characterUrl);
+  if (refImages.length > 0) {
+    itemData.images = refImages;
+  }
+
   const requestBody = {
-    items: [
-      {
-        businessType: 9,
-        modelId: String(state.imageModel),
-        generationType: 6,
-        prompt: prompt,
-        size: state.imageSize || "1024x1024",
-        resolution: state.imageSize || "1024x1024",
-        quality: "medium",
-        count: parseInt(state.imageCount, 10) || 1
-      }
-    ]
+    items: [itemData]
   };
 
   try {
@@ -2031,6 +2081,7 @@ async function handleProductImageUpload(event) {
   try {
     const compressedDataUrl = await compressAndResizeImage(file, 800);
     state.productImage = compressedDataUrl;
+    state.productImageUrl = ''; // Reset cached S3 URL
     els.productPreviewImg.src = state.productImage;
     els.productPreviewContainer.style.display = 'flex';
     els.btnClearProduct.style.display = 'block';
@@ -2044,6 +2095,7 @@ async function handleProductImageUpload(event) {
 
 function clearProductImage() {
   state.productImage = '';
+  state.productImageUrl = ''; // Reset cached S3 URL
   els.productImageInput.value = '';
   els.productPreviewImg.src = '';
   els.productPreviewContainer.style.display = 'none';
@@ -2060,6 +2112,7 @@ async function handleCharacterImageUpload(event) {
   try {
     const compressedDataUrl = await compressAndResizeImage(file, 800);
     state.characterImage = compressedDataUrl;
+    state.characterImageUrl = ''; // Reset cached S3 URL
     els.characterPreviewImg.src = state.characterImage;
     els.characterPreviewContainer.style.display = 'flex';
     els.btnClearCharacter.style.display = 'block';
@@ -2073,6 +2126,7 @@ async function handleCharacterImageUpload(event) {
 
 function clearCharacterImage() {
   state.characterImage = '';
+  state.characterImageUrl = ''; // Reset cached S3 URL
   els.characterImageInput.value = '';
   els.characterPreviewImg.src = '';
   els.characterPreviewContainer.style.display = 'none';
@@ -2580,18 +2634,58 @@ function showFreebeatVideoPlayer(recipeTitle, videoUrl) {
 }
 
 function handleRegenerateFromHistory(item) {
+  // 1. Restore the Recipe/Concept Title
+  state.storyboardTitle = item.recipeTitle || 'Recipe Storyboard';
+  if (els.storyboardDisplayTitle) {
+    els.storyboardDisplayTitle.textContent = state.storyboardTitle;
+  }
+  if (els.recipeConcept) {
+    els.recipeConcept.value = state.storyboardTitle;
+  }
+
   if (item.type === 'image') {
+    // 2. Switch Storyboard Mode to 'grid'
+    if (els.storyboardModeSelect) {
+      els.storyboardModeSelect.value = 'grid';
+      state.storyboardMode = 'grid';
+      handleStoryboardModeChange();
+    }
+
+    // 3. Restore Image Generator Settings
     els.imageModelSelect.value = item.modelId || '108';
     state.imageModel = item.modelId || '108';
     els.imageSizeSelect.value = item.resolution || '1024x1024';
     state.imageSize = item.resolution || '1024x1024';
     els.masterGridPrompt.value = item.prompt;
     
+    // 4. Restore the generated image in viewport if success
+    if (item.status === 'success' && item.videoUrl) {
+      state.combinedImage = item.videoUrl;
+      els.combinedStoryboardImage.src = item.videoUrl;
+      els.combinedStoryboardImage.style.display = 'block';
+      els.combinedImagePlaceholder.style.display = 'none';
+      els.combinedImageLoader.style.display = 'none';
+      els.storyboardImagesContainer.style.display = 'block';
+      els.btnDownloadCombined.disabled = false;
+      els.btnExportStoryboard.disabled = false;
+    } else {
+      // Clear viewport if not successful
+      state.combinedImage = '';
+      els.combinedStoryboardImage.src = '';
+      els.combinedStoryboardImage.style.display = 'none';
+      els.combinedImagePlaceholder.style.display = 'flex';
+      els.combinedImageLoader.style.display = 'none';
+      els.storyboardImagesContainer.style.display = 'none';
+      els.btnDownloadCombined.disabled = true;
+      els.btnExportStoryboard.disabled = true;
+    }
+
     showToast(`Mengekspor setelan dari riwayat gambar resep "${item.recipeTitle}"...`, 'info');
     switchTab('tab-generator');
     return;
   }
   
+  // For Video:
   const modelId = item.modelId;
   const config = modelConfigs[modelId];
   if (config && config.supportedModes) {
@@ -2611,6 +2705,15 @@ function handleRegenerateFromHistory(item) {
   els.freebeatGenerateAudio.checked = item.generateAudio;
   els.masterSeedancePrompt.value = item.prompt;
   
+  // Restore the generated video in player if success
+  if (item.status === 'success' && item.videoUrl) {
+    showFreebeatVideoPlayer(item.recipeTitle, item.videoUrl);
+  } else {
+    // Clear video player if not successful
+    els.freebeatVideoStatusContainer.style.display = 'none';
+    els.freebeatGeneratedVideo.src = '';
+  }
+
   showToast(`Mengekspor setelan dari riwayat resep "${item.recipeTitle}"...`, 'info');
   switchTab('tab-generator');
 }
@@ -2682,7 +2785,7 @@ async function handleGenerateFreebeatVideo() {
     const itemData = {
       modelId: String(modelId),
       generationType: genType,
-      prompt: prompt,
+      prompt: prompt.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
       duration: duration,
       resolution: resolution,
       aspectRatio: aspect_ratio,
@@ -3262,19 +3365,34 @@ async function generateIndividualSceneImage(scene) {
   renderPerFrameScenes();
   showToast(`Mulai rendering gambar Scene ${scene.scene_number}...`, 'info');
   
+  let productUrl = '';
+  let characterUrl = '';
+  if (state.productImage || state.characterImage) {
+    const urls = await getUploadedReferenceUrls();
+    productUrl = urls.productUrl;
+    characterUrl = urls.characterUrl;
+  }
+
+  const itemData = {
+    businessType: 9,
+    modelId: String(state.imageModel),
+    generationType: 6,
+    prompt: (scene.image_prompt || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
+    size: state.imageSize || "1024x1024",
+    resolution: state.imageSize || "1024x1024",
+    quality: "medium",
+    count: 1
+  };
+
+  const refImages = [];
+  if (productUrl) refImages.push(productUrl);
+  if (characterUrl) refImages.push(characterUrl);
+  if (refImages.length > 0) {
+    itemData.images = refImages;
+  }
+
   const requestBody = {
-    items: [
-      {
-        businessType: 9,
-        modelId: String(state.imageModel),
-        generationType: 6,
-        prompt: scene.image_prompt,
-        size: state.imageSize || "1024x1024",
-        resolution: state.imageSize || "1024x1024",
-        quality: "medium",
-        count: 1
-      }
-    ]
+    items: [itemData]
   };
   
   try {

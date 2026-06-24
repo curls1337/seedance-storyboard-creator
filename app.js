@@ -2643,22 +2643,33 @@ function handleRegenerateFromHistory(item) {
     els.recipeConcept.value = state.storyboardTitle;
   }
 
+  // 2. Hide Empty State and Show Preview Wrapper / Clear Button
+  if (els.storyboardEmptyState) {
+    els.storyboardEmptyState.style.display = 'none';
+  }
+  if (els.storyboardPreviewWrapper) {
+    els.storyboardPreviewWrapper.style.display = 'flex';
+  }
+  if (els.btnClearStoryboard) {
+    els.btnClearStoryboard.style.display = 'flex';
+  }
+
   if (item.type === 'image') {
-    // 2. Switch Storyboard Mode to 'grid'
+    // 3. Switch Storyboard Mode to 'grid'
     if (els.storyboardModeSelect) {
       els.storyboardModeSelect.value = 'grid';
       state.storyboardMode = 'grid';
       handleStoryboardModeChange();
     }
 
-    // 3. Restore Image Generator Settings
+    // 4. Restore Image Generator Settings
     els.imageModelSelect.value = item.modelId || '108';
     state.imageModel = item.modelId || '108';
     els.imageSizeSelect.value = item.resolution || '1024x1024';
     state.imageSize = item.resolution || '1024x1024';
     els.masterGridPrompt.value = item.prompt;
     
-    // 4. Restore the generated image in viewport if success
+    // 5. Restore the generated image in viewport if success
     if (item.status === 'success' && item.videoUrl) {
       state.combinedImage = item.videoUrl;
       els.combinedStoryboardImage.src = item.videoUrl;

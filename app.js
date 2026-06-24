@@ -2774,6 +2774,11 @@ async function clearFreebeatHistory() {
   }
 }
 
+// Keep storyboard grid crop instructions and negative instructions in the prompt for all models to prevent the grid reference from appearing in the generated videos
+function cleanVideoPromptForFreebeat(promptText) {
+  return (promptText || '').trim();
+}
+
 async function handleGenerateFreebeatVideo() {
   const activeKey = state.freebeatKeys.find(k => k.id === state.activeFreebeatKeyId);
   if (!activeKey) {
@@ -2815,7 +2820,7 @@ async function handleGenerateFreebeatVideo() {
     const itemData = {
       modelId: String(modelId),
       generationType: genType,
-      prompt: prompt.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
+      prompt: cleanVideoPromptForFreebeat(prompt).replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
       duration: duration,
       resolution: resolution,
       aspectRatio: aspect_ratio,
@@ -2832,6 +2837,9 @@ async function handleGenerateFreebeatVideo() {
       const endRef = state.vEndFile || state.vEndImage;
       if (!startRef && !endRef) {
         throw new Error('Minimal satu gambar referensi (Gambar Awal atau Gambar Akhir) wajib ditentukan untuk mode Image-to-Video.');
+      }
+      if (startRef && startRef === state.combinedImage) {
+        showToast('Peringatan: Anda menggunakan Gambar Storyboard Gabungan (Grid) sebagai Gambar Awal. Video kemungkinan akan menampilkan grid. Gunakan mode Text-to-Video (Tanpa Gambar Awal) atau potong per frame untuk hasil bersih.', 'warning');
       }
 
       let startUrl = '';

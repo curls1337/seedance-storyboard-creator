@@ -1716,7 +1716,7 @@ async function generateCombinedStoryboardImage() {
     const historyItem = {
       id: batchId,
       recipeTitle: state.storyboardTitle || 'Gambar Storyboard',
-      prompt: prompt,
+      prompt: prompt + '\n\n=== VIDEO PROMPT ===\n\n' + (state.masterSeedancePrompt || ''),
       modelId: String(state.imageModel),
       duration: 0,
       resolution: state.imageSize || '1024x1024',
@@ -2530,6 +2530,11 @@ function renderFreebeatHistory() {
     // Add Credits tag
     tagsHtml += `<span class="meta-tag" style="border-color: var(--accent-gold); color: var(--accent-gold); font-weight: 600;"><i class="fa-solid fa-coins" style="margin-right: 4px;"></i>${item.credits || 0} Credits</span>`;
 
+    let displayPrompt = item.prompt;
+    if (item.type === 'image' && item.prompt.includes('\n\n=== VIDEO PROMPT ===\n\n')) {
+      displayPrompt = item.prompt.split('\n\n=== VIDEO PROMPT ===\n\n')[0];
+    }
+
     card.innerHTML = `
       <div class="history-card-header">
         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -2541,7 +2546,7 @@ function renderFreebeatHistory() {
       <div class="history-card-meta">
         ${tagsHtml}
       </div>
-      <div class="history-card-prompt" title="${item.prompt}">${item.prompt}</div>
+      <div class="history-card-prompt" title="${displayPrompt}">${displayPrompt}</div>
       
       ${item.status === 'success' ? (
         item.type === 'image' ? `
@@ -2667,7 +2672,21 @@ function handleRegenerateFromHistory(item) {
     state.imageModel = item.modelId || '108';
     els.imageSizeSelect.value = item.resolution || '1024x1024';
     state.imageSize = item.resolution || '1024x1024';
-    els.masterGridPrompt.value = item.prompt;
+    
+    let gridPrompt = item.prompt;
+    let videoPrompt = '';
+    if (item.prompt.includes('\n\n=== VIDEO PROMPT ===\n\n')) {
+      const parts = item.prompt.split('\n\n=== VIDEO PROMPT ===\n\n');
+      gridPrompt = parts[0];
+      videoPrompt = parts[1];
+    }
+    els.masterGridPrompt.value = gridPrompt;
+    els.masterSeedancePrompt.value = videoPrompt;
+    state.masterSeedancePrompt = videoPrompt;
+    const modelIdVal = els.freebeatModelSelect.value;
+    if (modelIdVal) {
+      state.videoPrompts[modelIdVal] = videoPrompt;
+    }
     
     // 5. Restore the generated image in viewport if success
     if (item.status === 'success' && item.videoUrl) {

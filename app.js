@@ -1735,7 +1735,8 @@ async function generateCombinedStoryboardImage() {
       throw new Error(`Koneksi API gagal. HTTP status: ${response.status}`);
     }
     
-    const data = await response.json();
+    const text = await response.text();
+    const data = JSON.parse(sanitizeJsonString(text));
     if (data.code !== 0) {
       throw new Error(data.msg || 'Terjadi kesalahan dari API Freebeat');
     }
@@ -2305,7 +2306,8 @@ async function uploadFileToFreebeat(file, keyPrefix = 'agent/character') {
     throw new Error(`Gagal membuat upload URL. HTTP status: ${response.status}`);
   }
 
-  const data = await response.json();
+  const text = await response.text();
+  const data = JSON.parse(sanitizeJsonString(text));
   if (data.code !== 0 || !data.data || !data.data.list || data.data.list.length === 0) {
     throw new Error(data.msg || 'Gagal membuat upload URL dari Freebeat API.');
   }
@@ -2974,7 +2976,8 @@ async function handleGenerateFreebeatVideo() {
       throw new Error(`Koneksi API gagal. HTTP status: ${response.status}`);
     }
     
-    const data = await response.json();
+    const text = await response.text();
+    const data = JSON.parse(sanitizeJsonString(text));
     if (data.code !== 0) {
       throw new Error(data.msg || 'Terjadi kesalahan dari API Freebeat');
     }
@@ -3485,7 +3488,8 @@ async function generateIndividualSceneImage(scene) {
     
     if (!response.ok) throw new Error(`HTTP status: ${response.status}`);
     
-    const data = await response.json();
+    const text = await response.text();
+    const data = JSON.parse(sanitizeJsonString(text));
     if (data.code !== 0) throw new Error(data.msg || 'Error dari API Freebeat');
     
     const batchId = data.data.batchId;

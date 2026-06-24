@@ -1769,17 +1769,22 @@ async function generateCombinedStoryboardImage() {
   if (productUrl) refImages.push(productUrl);
   if (characterUrl) refImages.push(characterUrl);
 
+  const isWan = (state.imageModel === '99' || state.imageModel === '100');
+  const hasRef = refImages.length > 0 && !isWan;
+  const businessType = hasRef ? 11 : 9;
+  const generationType = hasRef ? 8 : 6;
+
   const itemData1 = {
-    businessType: 9,
+    businessType: businessType,
     modelId: String(state.imageModel),
-    generationType: 6,
+    generationType: generationType,
     prompt: prompt.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
     size: state.imageSize || "1024x1024",
     resolution: state.imageSize || "1024x1024",
     quality: "medium",
     count: 1
   };
-  if (refImages.length > 0) {
+  if (hasRef) {
     itemData1.images = refImages;
   }
   items.push(itemData1);
@@ -1795,16 +1800,16 @@ async function generateCombinedStoryboardImage() {
       return;
     }
     const itemData2 = {
-      businessType: 9,
+      businessType: businessType,
       modelId: String(state.imageModel),
-      generationType: 6,
+      generationType: generationType,
       prompt: prompt2.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
       size: state.imageSize || "1024x1024",
       resolution: state.imageSize || "1024x1024",
       quality: "medium",
       count: 1
     };
-    if (refImages.length > 0) {
+    if (hasRef) {
       itemData2.images = refImages;
     }
     items.push(itemData2);
@@ -3574,10 +3579,19 @@ async function generateIndividualSceneImage(scene) {
     characterUrl = urls.characterUrl;
   }
 
+  const refImages = [];
+  if (productUrl) refImages.push(productUrl);
+  if (characterUrl) refImages.push(characterUrl);
+
+  const isWan = (state.imageModel === '99' || state.imageModel === '100');
+  const hasRef = refImages.length > 0 && !isWan;
+  const businessType = hasRef ? 11 : 9;
+  const generationType = hasRef ? 8 : 6;
+
   const itemData = {
-    businessType: 9,
+    businessType: businessType,
     modelId: String(state.imageModel),
-    generationType: 6,
+    generationType: generationType,
     prompt: (scene.image_prompt || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
     size: state.imageSize || "1024x1024",
     resolution: state.imageSize || "1024x1024",
@@ -3585,10 +3599,7 @@ async function generateIndividualSceneImage(scene) {
     count: 1
   };
 
-  const refImages = [];
-  if (productUrl) refImages.push(productUrl);
-  if (characterUrl) refImages.push(characterUrl);
-  if (refImages.length > 0) {
+  if (hasRef) {
     itemData.images = refImages;
   }
 

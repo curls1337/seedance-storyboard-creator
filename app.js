@@ -1393,6 +1393,45 @@ async function copySeedancePrompt() {
   }
 }
 
+// Helper to sanitize JSON response from LLM by escaping control characters (newlines, tabs, etc.) inside string literals
+function sanitizeJsonString(str) {
+  let result = '';
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === '"' && !escape) {
+      inString = !inString;
+    }
+    
+    if (inString) {
+      const code = char.charCodeAt(0);
+      if (code < 32) {
+        if (char === '\n') {
+          result += '\\n';
+        } else if (char === '\r') {
+          result += '\\r';
+        } else if (char === '\t') {
+          result += '\\t';
+        } else {
+          result += '\\u' + code.toString(16).padStart(4, '0');
+        }
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+    
+    if (char === '\\' && !escape) {
+      escape = true;
+    } else {
+      escape = false;
+    }
+  }
+  return result;
+}
+
 // API Generation: Create Storyboard Steps with LLM (via secure endpoint)
 async function generateStoryboardWithAI() {
   let concept = els.recipeConcept.value.trim();
@@ -1518,7 +1557,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       content = jsonMatch[1];
     }
     
-    const parsedData = JSON.parse(content);
+    const parsedData = JSON.parse(sanitizeJsonString(content));
     
     state.storyboardTitle = parsedData.title || 'Custom Recipe Storyboard';
     

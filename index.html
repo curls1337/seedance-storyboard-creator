@@ -340,10 +340,19 @@
                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
                   Kirimkan prompt ini ke AI Image Generator untuk membuat **satu gambar infografis gabungan** di atas.
                 </p>
-                <div class="form-group">
+                <div class="form-group" id="grid-prompt-1-group" style="margin-bottom: 0;">
+                  <label id="lbl-master-grid-prompt" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: none;">Prompt Gambar 1 (Scene 1-X)</label>
                   <div class="input-wrapper">
                     <i class="fa-solid fa-align-left input-icon" style="top: 20px;"></i>
                     <textarea id="master-grid-prompt" style="min-height: 120px; padding: 12px 12px 12px 36px; line-height: 1.5; font-family: monospace; font-size: 13px;" placeholder="Prompt grid image..."></textarea>
+                  </div>
+                </div>
+
+                <div class="form-group" id="grid-prompt-2-group" style="display: none; margin-top: 12px; margin-bottom: 0;">
+                  <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Prompt Gambar 2 (Scene Y-Z)</label>
+                  <div class="input-wrapper">
+                    <i class="fa-solid fa-align-left input-icon" style="top: 20px;"></i>
+                    <textarea id="master-grid-prompt-2" style="min-height: 120px; padding: 12px 12px 12px 36px; line-height: 1.5; font-family: monospace; font-size: 13px;" placeholder="Prompt untuk grid gambar kedua..."></textarea>
                   </div>
                 </div>
                 

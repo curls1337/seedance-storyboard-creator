@@ -5,6 +5,7 @@ const state = {
   sessionUser: null, // { id, username, role }
   storyboardTitle: 'Indomie Nyemek Viral',
   masterGridPrompt: '',
+  masterGridPrompt2: '',
   masterSeedancePrompt: '',
   combinedImage: '',
   combinedImage2: '',
@@ -202,6 +203,7 @@ const els = {
   
   // Master Prompt Editor Elements
   masterGridPrompt: document.getElementById('master-grid-prompt'),
+  masterGridPrompt2: document.getElementById('master-grid-prompt-2'),
   btnCopyMasterPrompt: document.getElementById('btn-copy-master-prompt'),
   btnGenerateCombinedImage: document.getElementById('btn-generate-combined-image'),
   
@@ -490,6 +492,30 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+// Helper to update grid prompt fields visibility based on image count (1 or 2 images)
+function updateGridPromptsVisibility() {
+  const prompt2Group = document.getElementById('grid-prompt-2-group');
+  const lbl1 = document.getElementById('lbl-master-grid-prompt');
+  
+  if (state.imageCount === 2) {
+    if (prompt2Group) prompt2Group.style.display = 'block';
+    if (lbl1) lbl1.style.display = 'block';
+  } else {
+    if (prompt2Group) prompt2Group.style.display = 'none';
+    if (lbl1) lbl1.style.display = 'none';
+  }
+  updateGenerateButtonText();
+}
+
+function updateGenerateButtonText() {
+  if (!els.btnGenerateCombinedImage) return;
+  if (state.imageCount === 2) {
+    els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-image"></i> Generate Gambar Storyboard (2 Prompt)';
+  } else {
+    els.btnGenerateCombinedImage.innerHTML = '<i class="fa-solid fa-image"></i> Generate Gambar Storyboard (1 Prompt)';
+  }
+}
+
 // Event Listeners Setup
 function setupEventListeners() {
   // Login Form
@@ -550,6 +576,7 @@ function setupEventListeners() {
   });
   els.imageCountSelect.addEventListener('change', () => {
     state.imageCount = parseInt(els.imageCountSelect.value, 10) || 1;
+    updateGridPromptsVisibility();
   });
 
   // Product image events
@@ -608,6 +635,7 @@ function setupEventListeners() {
 
   // Clear History
   els.btnClearHistoryTab.addEventListener('click', clearFreebeatHistory);
+  updateGridPromptsVisibility();
 }
 
 // ----------------------------------------------------
@@ -1212,6 +1240,7 @@ function loadTemplate(templateId) {
   // Clear/reset active storyboard workspace instead of populating with dummy scene data
   state.storyboardTitle = '';
   state.masterGridPrompt = '';
+  state.masterGridPrompt2 = '';
   state.masterSeedancePrompt = '';
   state.scenes = [];
   state.videoPrompts = {};
@@ -1256,6 +1285,7 @@ function loadTemplate(templateId) {
   
   // Clear prompts editor values
   els.masterGridPrompt.value = '';
+  if (els.masterGridPrompt2) els.masterGridPrompt2.value = '';
   els.masterSeedancePrompt.value = '';
   
   // Hide video preview/status if open
@@ -1274,6 +1304,8 @@ function loadTemplate(templateId) {
   // Sync template dropdown option selection
   els.templateSelect.value = templateId;
   
+  updateGridPromptsVisibility();
+  
   showToast(`Gaya Video "${tpl.title}" berhasil dipilih. Tulis konsep video Anda lalu klik "Buat Storyboard AI" untuk memulai!`, 'info');
 }
 
@@ -1281,6 +1313,7 @@ function loadTemplate(templateId) {
 function clearStoryboard() {
   state.storyboardTitle = '';
   state.masterGridPrompt = '';
+  state.masterGridPrompt2 = '';
   state.masterSeedancePrompt = '';
   state.combinedImage = '';
   state.combinedImage2 = '';
@@ -1331,6 +1364,7 @@ function clearStoryboard() {
   
   // Clear prompts
   els.masterGridPrompt.value = '';
+  if (els.masterGridPrompt2) els.masterGridPrompt2.value = '';
   els.masterSeedancePrompt.value = '';
   
   // Reset combined image view
@@ -1364,12 +1398,18 @@ function clearStoryboard() {
   els.storyboardEmptyState.style.display = 'block';
   els.btnClearStoryboard.style.display = 'none';
   
+  updateGridPromptsVisibility();
+  
   showToast('Storyboard berhasil dibersihkan.', 'success');
 }
 
 // Copy Master Grid Prompt
 async function copyMasterPrompt() {
-  const text = els.masterGridPrompt.value.trim();
+  let text = els.masterGridPrompt.value.trim();
+  if (state.imageCount === 2 && els.masterGridPrompt2) {
+    const text2 = els.masterGridPrompt2.value.trim();
+    text = `=== PROMPT GAMBAR 1 ===\n${text}\n\n=== PROMPT GAMBAR 2 ===\n${text2}`;
+  }
   if (!text) return;
   
   try {
@@ -1471,7 +1511,25 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
   ]
 }`;
   } else {
-    systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
+    if (state.imageCount === 2) {
+      const halfCount = Math.ceil(state.sceneCount / 2);
+      systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
+Your task is to take a cooking recipe, video concept, or a base template and design:
+1. A master grid prompt ("master_grid_prompt") in English that will generate a single vertical storyboard grid image consisting of the first ${halfCount} sequential vertical panels (from Scene 1 to Scene ${halfCount}). The image should be formatted exactly like a cooking video recipe infographic. Each panel must depict a step. Instruct the image generator to draw "SCENE X" (yellow bold text) on the top-left of each panel, timestamps (white text) on the top-right, and a solid black footer directly below each panel containing a bold yellow/gold title in Indonesian and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. Use a dark background and professional food photography style.
+2. A second master grid prompt ("master_grid_prompt_2") in English that will generate a second vertical storyboard grid image consisting of the remaining ${state.sceneCount - halfCount} sequential vertical panels (from Scene ${halfCount + 1} to Scene ${state.sceneCount}). The formatting must be identical to the first grid. The panels should start at Scene ${halfCount + 1} and go to Scene ${state.sceneCount}.
+CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) consistently in both master grid prompts. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance consistently in all panels in both master grid prompts.
+3. A single master Seedance prompt ("master_seedance_prompt") in English. This is a unified prompt that will be sent to Seedance along with the uploaded grid images to animate the storyboard. It must describe the chronological animation, camera movement, and visual details for all ${state.sceneCount} panels sequentially, referencing the timestamps.
+CRITICAL: You MUST begin the "master_seedance_prompt" with a strong instruction directing the video generator to completely ignore and crop out all grid lines, borders, black footers, text overlays, and labels from the input images, and to zoom in to show only the clean food/beverage and action in full screen. For example, begin with: "IMPORTANT: The input consists of two storyboard grid images with borders, black footers, and text overlays. For the generated video, you MUST completely crop out all grid lines, borders, black footers, and text overlays. Zoom in to show only the food/beverage and action in clean full screen. At the very beginning (0-Xs), start directly with a clean, full-screen cinematic shot of [Scene 1 Description], with absolutely no text or borders visible." and then list the remaining scenes.
+
+Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSON, or wrap it inside clean markdown JSON):
+{
+  "title": "NAMA RESEP / KONSEP",
+  "master_grid_prompt": "...",
+  "master_grid_prompt_2": "...",
+  "master_seedance_prompt": "..."
+}`;
+    } else {
+      systemPrompt = `You are an expert storyboard planner for AI video generation on platforms like Seedance.
 Your task is to take a cooking recipe, video concept, or a base template and design:
 1. A master grid prompt ("master_grid_prompt") in English that will generate a single vertical storyboard grid image consisting of ${state.sceneCount} sequential vertical panels. The image should be formatted exactly like a cooking video recipe infographic. Each panel must depict a step. Instruct the image generator to draw "SCENE X" (yellow bold text) on the top-left of each panel, timestamps (white text) on the top-right, and a solid black footer directly below each panel containing a bold yellow/gold title in Indonesian and a short description in white text in Indonesian. Separate all panels with a clean thin white border line. Use a dark background and professional food photography style.
 CRITICAL: If the user provides a product reference image, you MUST analyze it and explicitly describe the product's visual features (such as branding, colors, shape, and packaging) in the generated master grid prompt. If a character reference image is provided, you MUST analyze it and explicitly describe the character's face, hair, clothing, and overall appearance consistently in all panels involving the character.
@@ -1484,6 +1542,7 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
   "master_grid_prompt": "...",
   "master_seedance_prompt": "..."
 }`;
+    }
   }
 
   try {
@@ -1595,11 +1654,18 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
       els.storyboardDisplayMeta.textContent = `Per Frame • ${state.scenes.length} Langkah`;
     } else {
       state.masterGridPrompt = parsedData.master_grid_prompt || '';
+      state.masterGridPrompt2 = parsedData.master_grid_prompt_2 || '';
       state.masterSeedancePrompt = parsedData.master_seedance_prompt || '';
       
       // Set prompt input values
       els.masterGridPrompt.value = state.masterGridPrompt;
+      if (els.masterGridPrompt2) {
+        els.masterGridPrompt2.value = state.masterGridPrompt2;
+      }
       els.masterSeedancePrompt.value = state.masterSeedancePrompt;
+      
+      // Update visibility of the second grid prompt
+      updateGridPromptsVisibility();
       
       // Update prompt for current model
       const modelId = els.freebeatModelSelect.value;
@@ -1698,7 +1764,12 @@ async function generateCombinedStoryboardImage() {
     els.combinedLoaderText.textContent = 'Memulai antrean render Image Studio...';
   }
 
-  const itemData = {
+  const items = [];
+  const refImages = [];
+  if (productUrl) refImages.push(productUrl);
+  if (characterUrl) refImages.push(characterUrl);
+
+  const itemData1 = {
     businessType: 9,
     modelId: String(state.imageModel),
     generationType: 6,
@@ -1706,18 +1777,41 @@ async function generateCombinedStoryboardImage() {
     size: state.imageSize || "1024x1024",
     resolution: state.imageSize || "1024x1024",
     quality: "medium",
-    count: parseInt(state.imageCount, 10) || 1
+    count: 1
   };
-
-  const refImages = [];
-  if (productUrl) refImages.push(productUrl);
-  if (characterUrl) refImages.push(characterUrl);
   if (refImages.length > 0) {
-    itemData.images = refImages;
+    itemData1.images = refImages;
+  }
+  items.push(itemData1);
+
+  if (state.imageCount === 2 && els.masterGridPrompt2) {
+    const prompt2 = els.masterGridPrompt2.value.trim();
+    if (!prompt2) {
+      showToast('Prompt grid kedua masih kosong!', 'error');
+      els.btnGenerateCombinedImage.disabled = false;
+      updateGenerateButtonText();
+      els.combinedImagePlaceholder.style.display = 'flex';
+      els.combinedImageLoader.style.display = 'none';
+      return;
+    }
+    const itemData2 = {
+      businessType: 9,
+      modelId: String(state.imageModel),
+      generationType: 6,
+      prompt: prompt2.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim(),
+      size: state.imageSize || "1024x1024",
+      resolution: state.imageSize || "1024x1024",
+      quality: "medium",
+      count: 1
+    };
+    if (refImages.length > 0) {
+      itemData2.images = refImages;
+    }
+    items.push(itemData2);
   }
 
   const requestBody = {
-    items: [itemData]
+    items: items
   };
 
   try {
@@ -1756,7 +1850,9 @@ async function generateCombinedStoryboardImage() {
     const historyItem = {
       id: batchId,
       recipeTitle: state.storyboardTitle || 'Gambar Storyboard',
-      prompt: prompt + '\n\n=== VIDEO PROMPT ===\n\n' + (state.masterSeedancePrompt || ''),
+      prompt: (state.imageCount === 2 && els.masterGridPrompt2) 
+        ? prompt + '\n\n=== GRID PROMPT 2 ===\n\n' + els.masterGridPrompt2.value.trim() + '\n\n=== VIDEO PROMPT ===\n\n' + (state.masterSeedancePrompt || '')
+        : prompt + '\n\n=== VIDEO PROMPT ===\n\n' + (state.masterSeedancePrompt || ''),
       modelId: String(state.imageModel),
       duration: 0,
       resolution: state.imageSize || '1024x1024',
@@ -2721,13 +2817,38 @@ function handleRegenerateFromHistory(item) {
       gridPrompt = parts[0];
       videoPrompt = parts[1];
     }
-    els.masterGridPrompt.value = gridPrompt;
+    
+    let gridPrompt1 = gridPrompt;
+    let gridPrompt2 = '';
+    if (gridPrompt.includes('\n\n=== GRID PROMPT 2 ===\n\n')) {
+      const parts = gridPrompt.split('\n\n=== GRID PROMPT 2 ===\n\n');
+      gridPrompt1 = parts[0];
+      gridPrompt2 = parts[1];
+      
+      state.imageCount = 2;
+      els.imageCountSelect.value = '2';
+    } else {
+      state.imageCount = 1;
+      els.imageCountSelect.value = '1';
+    }
+    
+    state.masterGridPrompt = gridPrompt1;
+    els.masterGridPrompt.value = gridPrompt1;
+    
+    state.masterGridPrompt2 = gridPrompt2;
+    if (els.masterGridPrompt2) {
+      els.masterGridPrompt2.value = gridPrompt2;
+    }
+    
     els.masterSeedancePrompt.value = videoPrompt;
     state.masterSeedancePrompt = videoPrompt;
+    
     const modelIdVal = els.freebeatModelSelect.value;
     if (modelIdVal) {
       state.videoPrompts[modelIdVal] = videoPrompt;
     }
+    
+    updateGridPromptsVisibility();
     
     // 5. Restore the generated image in viewport if success
     if (item.status === 'success' && item.videoUrl) {

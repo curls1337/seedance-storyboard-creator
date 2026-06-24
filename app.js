@@ -2387,9 +2387,9 @@ async function uploadFileToFreebeat(file, keyPrefix = 'agent/character') {
     throw new Error('API Key Freebeat tidak ditemukan. Silakan pilih API key terlebih dahulu.');
   }
 
-  const ext = file.name.split('.').pop() || 'png';
-  const fileName = file.name;
-  const key = `${keyPrefix}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const ext = (file.name || 'file.png').split('.').pop().toLowerCase() || 'png';
+  const fileName = `ref.${ext}`;
+  const key = `${keyPrefix}/${Math.random().toString(36).slice(2, 10)}.${ext}`;
   const bucketName = "freebeat-static";
 
   // 1. Get Presigned URL

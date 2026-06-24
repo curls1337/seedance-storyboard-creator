@@ -178,7 +178,6 @@ const els = {
   
   // Preview Area
   storyboardEmptyState: document.getElementById('storyboard-empty-state'),
-  btnQuickLoadNyemek: document.getElementById('btn-quick-load-nyemek'),
   storyboardPreviewWrapper: document.getElementById('storyboard-preview-wrapper'),
   storyboardDisplayTitle: document.getElementById('storyboard-display-title'),
   storyboardDisplayMeta: document.getElementById('storyboard-display-meta'),
@@ -394,8 +393,6 @@ function handleLoginSuccess(user) {
   // Switch to default Tab: Storyboard Creator
   switchTab('tab-generator');
   
-  // Load default Indomie Nyemek Template
-  loadTemplate('indomie-nyemek');
 }
 
 // Apply Role-based access constraints on UI
@@ -533,7 +530,6 @@ function setupEventListeners() {
   els.btnGenerateStoryboard.addEventListener('click', generateStoryboardWithAI);
   els.btnClearStoryboard.addEventListener('click', clearStoryboard);
   els.btnOneClickFlow.addEventListener('click', runOneClickFlow);
-  els.btnQuickLoadNyemek.addEventListener('click', () => loadTemplate('indomie-nyemek'));
   
   // Combined Image and Master Prompt Actions
   els.btnGenerateCombinedImage.addEventListener('click', generateCombinedStoryboardImage);
@@ -1211,9 +1207,12 @@ function loadTemplate(templateId) {
   const tpl = templates[templateId];
   if (!tpl) return;
   
-  state.storyboardTitle = tpl.title;
-  state.masterGridPrompt = generateGridPrompt(tpl.title, tpl.scenes);
-  state.masterSeedancePrompt = generateSeedancePrompt(tpl.title, tpl.scenes);
+  // Clear/reset active storyboard workspace instead of populating with dummy scene data
+  state.storyboardTitle = '';
+  state.masterGridPrompt = '';
+  state.masterSeedancePrompt = '';
+  state.scenes = [];
+  state.videoPrompts = {};
   
   // Reset image
   state.combinedImage = '';
@@ -1253,43 +1252,27 @@ function loadTemplate(templateId) {
   els.btnUseStoryboardStart2.style.display = 'none';
   els.btnUseStoryboardEnd2.style.display = 'none';
   
-  // Set prompts editor values
-  els.masterGridPrompt.value = state.masterGridPrompt;
-  els.masterSeedancePrompt.value = state.masterSeedancePrompt;
+  // Clear prompts editor values
+  els.masterGridPrompt.value = '';
+  els.masterSeedancePrompt.value = '';
   
-  // Sync to model-specific prompt
-  const modelId = els.freebeatModelSelect.value;
-  if (modelId) {
-    state.videoPrompts[modelId] = state.masterSeedancePrompt;
+  // Hide video preview/status if open
+  els.freebeatVideoStatusContainer.style.display = 'none';
+  els.freebeatGeneratedVideo.src = '';
+  
+  // Keep storyboard preview hidden, show empty state
+  els.storyboardPreviewWrapper.style.display = 'none';
+  els.storyboardEmptyState.style.display = 'block';
+  els.btnClearStoryboard.style.display = 'none';
+  
+  if (els.perFrameScenesList) {
+    els.perFrameScenesList.innerHTML = '';
   }
   
-  // Adjust scenes count in slider dynamically
-  let defaultCount = tpl.scenes.length;
-  
-  state.sceneCount = defaultCount;
-  els.sceneCount.value = defaultCount;
-  els.sceneCountVal.textContent = defaultCount;
-  
-  // Load per-frame scenes
-  state.scenes = getScenesForTemplate(templateId);
-  
-  showToast(`Template "${tpl.title}" berhasil dimuat!`, 'success');
-  
-  // Show UI elements
-  els.storyboardEmptyState.style.display = 'none';
-  els.storyboardPreviewWrapper.style.display = 'flex';
-  els.btnClearStoryboard.style.display = 'flex';
-  els.storyboardDisplayTitle.textContent = state.storyboardTitle;
-  
-  if (state.storyboardMode === 'per-frame') {
-    renderPerFrameScenes();
-    els.storyboardDisplayMeta.textContent = `Per Frame • ${state.scenes.length} Langkah`;
-  } else {
-    els.storyboardDisplayMeta.textContent = `Infografis Gabungan • ${defaultCount} Langkah`;
-  }
-  
-  // Reset select option
+  // Sync template dropdown option selection
   els.templateSelect.value = templateId;
+  
+  showToast(`Gaya Video "${tpl.title}" berhasil dipilih. Tulis konsep video Anda lalu klik "Buat Storyboard AI" untuk memulai!`, 'info');
 }
 
 // Clear Storyboard Creator State

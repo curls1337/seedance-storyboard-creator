@@ -168,6 +168,8 @@ const els = {
   settingsForm: document.getElementById('settings-form'),
   
   templateSelect: document.getElementById('template-select'),
+  customStyleWrapper: document.getElementById('custom-style-wrapper'),
+  customStyleInput: document.getElementById('custom-style-input'),
   
   recipeConcept: document.getElementById('recipe-concept'),
   textModelSelect: document.getElementById('text-model-select'),
@@ -340,6 +342,11 @@ function populateTemplateDropdown() {
     opt.textContent = tpl.title;
     els.templateSelect.appendChild(opt);
   });
+  // Add manual custom option
+  const customOpt = document.createElement('option');
+  customOpt.value = 'custom';
+  customOpt.textContent = 'Gaya Kustom (Manual)';
+  els.templateSelect.appendChild(customOpt);
 }
 
 // Initialization
@@ -1234,8 +1241,16 @@ async function saveKeyBalanceToDB(keyObj, credits) {
 // ----------------------------------------------------
 
 function loadTemplate(templateId) {
-  const tpl = templates[templateId];
-  if (!tpl) return;
+  let title = 'Gaya Kustom';
+  
+  if (templateId === 'custom') {
+    if (els.customStyleWrapper) els.customStyleWrapper.style.display = 'block';
+  } else {
+    if (els.customStyleWrapper) els.customStyleWrapper.style.display = 'none';
+    const tpl = templates[templateId];
+    if (!tpl) return;
+    title = tpl.title;
+  }
   
   // Clear/reset active storyboard workspace instead of populating with dummy scene data
   state.storyboardTitle = '';
@@ -1306,7 +1321,7 @@ function loadTemplate(templateId) {
   
   updateGridPromptsVisibility();
   
-  showToast(`Gaya Video "${tpl.title}" berhasil dipilih. Tulis konsep video Anda lalu klik "Buat Storyboard AI" untuk memulai!`, 'info');
+  showToast(`Gaya Video "${title}" berhasil dipilih. Tulis konsep video Anda lalu klik "Buat Storyboard AI" untuk memulai!`, 'info');
 }
 
 // Clear Storyboard Creator State
@@ -1554,7 +1569,12 @@ Respond ONLY with a JSON object in this format (no markdown blocks, just raw JSO
     const storyboardTypeStr = isPerFrame ? 'per-frame' : 'single-prompt master grid';
 
     let userText = `Create a ${storyboardTypeStr} storyboard with ${state.sceneCount} steps for: "${concept}".`;
-    if (selectedTemplateId && templates[selectedTemplateId]) {
+    if (selectedTemplateId === 'custom') {
+      const customStyle = els.customStyleInput ? els.customStyleInput.value.trim() : '';
+      if (customStyle) {
+        userText += `\n\nCRITICAL STYLE DIRECTION: You MUST format and structure the storyboard according to these custom style guidelines:\n${customStyle}\n`;
+      }
+    } else if (selectedTemplateId && templates[selectedTemplateId]) {
       const tpl = templates[selectedTemplateId];
       userText += `\n\nCRITICAL STYLE DIRECTION: You MUST format and structure the storyboard according to the "${tpl.title}" style guidelines:\n${tpl.instructions}\n`;
       userText += `\nHere are the baseline scene flows of the style for your reference:\n`;
